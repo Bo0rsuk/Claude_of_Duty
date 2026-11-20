@@ -2,10 +2,12 @@
 
 Shared instructions for all agents working in this repo (multiple users).
 
-## Language
-Reply in Polish or English, matching the language of the user's prompt.
+## General rules
+- Reply in Polish or English, matching the language of the user's prompt.
+- Never use em dash "—", always use hyphen "-".
 
 ## Commit workflow
+- Never add yourself as a coauthor of a commit.
 - Never commit directly to `master` or `develop`. Branch first:
   - `feature/<name>` from `develop`
   - `hotfix/<name>` from `master`
