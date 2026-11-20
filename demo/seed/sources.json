@@ -1,0 +1,20 @@
+[
+  {
+    "sourceId": "mock-webhook",
+    "orgId": "demo",
+    "name": "Mock monitoring webhook",
+    "enabled": true,
+    "connector": { "type": "webhook" },
+    "parser": {
+      "format": "json",
+      "split": "alerts",
+      "eventTime": "startsAt",
+      "timeFormat": "iso8601",
+      "level": "labels.severity",
+      "message": "annotations.summary"
+    },
+    "ingestToken": "demo-token",
+    "createdAt": "2026-11-20T21:00:00.000Z",
+    "updatedAt": "2026-11-20T21:00:00.000Z"
+  }
+]
