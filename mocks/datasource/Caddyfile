@@ -1,0 +1,12 @@
+# SITE_ADDRESS is ":80" for plain HTTP or a hostname, which makes Caddy
+# obtain a TLS certificate for it automatically.
+{$SITE_ADDRESS::80} {
+	# Kafka REST API (Redpanda HTTP Proxy), e.g. /kafka/topics
+	handle_path /kafka/* {
+		reverse_proxy redpanda:8082
+	}
+
+	handle {
+		reverse_proxy generator:8000
+	}
+}

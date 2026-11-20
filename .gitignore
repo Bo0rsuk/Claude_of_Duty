@@ -9,7 +9,13 @@ Thumbs.db
 node_modules/
 dist/
 build/
+target/
 __pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
