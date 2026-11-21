@@ -1,43 +1,44 @@
 import { Field } from "#components/field.tsx";
-import { testConditions } from "#features/rules/domain/test-conditions.ts";
-import { recentDemoEvents } from "#features/rules/services/demo-events.ts";
+import { latestEvent, suggestConditions, tryConditions } from "#features/rules/services/rule-assistant.ts";
 import { useWorkspaceContext } from "#features/workspace";
 import { Check, Sparkles, Undo2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function Assistant() {
-  const { rule, editRule } = useWorkspaceContext(),
+  const { rule, editRule, account, sourceIdOf } = useWorkspaceContext(),
+    sourceId = sourceIdOf(rule.source),
+    [example, setExample] = useState<Record<string, unknown> | null>(null),
     [goal, setGoal] = useState(""),
     [proposal, setProposal] = useState<string | null>(null),
     [busy, setBusy] = useState(false),
     [old, setOld] = useState<string | null>(null),
     [test, setTest] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
+  // Ignore an answer that arrives after the editor moved on.
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    latestEvent(sourceId).then((event) => active.current && setExample(event), () => undefined);
+    return () => {
+      active.current = false;
+    };
+  }, [sourceId]);
   function generate() {
     setBusy(true);
     setTest("");
-    timer.current = setTimeout(() => {
-      const text = goal.toLowerCase();
-      setProposal(
-        text.includes("pricing")
-          ? "service starts_with pricing-engine- AND level = warning"
-          : text.includes("trade") || text.includes("notional")
-            ? "desk = rates AND notional > 10000000"
-            : text.includes("payment")
-              ? "service = payments-api AND level = critical"
-              : "service = " +
-                rule.source +
-                " AND environment = production AND outcome = failed",
-      );
-      setBusy(false);
-    }, 650);
+    suggestConditions(goal, rule.source, sourceId)
+      .then((suggestion) => {
+        if (!active.current) return;
+        setProposal(suggestion.conditions);
+        setTest(suggestion.note);
+      })
+      .catch((failure: Error) => active.current && setTest(failure.message))
+      .finally(() => active.current && setBusy(false));
   }
   return (
     <section className="assistant">
       <h3>
         <Sparkles />
-        Filter assistant <span className="demo-label">Simulation</span>
+        Filter assistant {!account && <span className="demo-label">Simulation</span>}
       </h3>
       <Field label="What do you want to catch?">
         <textarea
@@ -50,7 +51,7 @@ export function Assistant() {
         <summary>Example event</summary>
         <pre>
           {JSON.stringify(
-            {
+            example ?? {
               service: rule.source,
               environment: "production",
               outcome: "failed",
@@ -77,7 +78,11 @@ export function Assistant() {
               />
             </Field>
             <div className="buttons">
-              <button onClick={() => setTest(testConditions(proposal, recentDemoEvents))}>
+              <button
+                onClick={() =>
+                  tryConditions(proposal, sourceId).then(setTest, (failure: Error) => setTest(failure.message))
+                }
+              >
                 Test proposal
               </button>
               <button

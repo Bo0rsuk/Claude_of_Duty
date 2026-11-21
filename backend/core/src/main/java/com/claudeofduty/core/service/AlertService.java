@@ -131,6 +131,32 @@ public final class AlertService {
     }
 
     /**
+     * Records which steps of the alert's runbook checklist are done, replacing the previous set,
+     * so that everyone looking at the alert sees the same progress.
+     */
+    public Alert checkSteps(Caller caller, String alertId, List<Integer> checked) {
+        if (checked == null || checked.stream().anyMatch(step -> step == null || step < 0)) {
+            throw ApiException.invalid("checked must be a list of step positions, counted from 0");
+        }
+        Alert alert = require(caller, alertId);
+        Alert updated = alerts.update(caller.orgId(), alert.alertId(),
+                        changes("checkedSteps", checked.stream().distinct().sorted().toList()))
+                .orElseThrow(() -> notFound(alertId));
+        publisher.publish(AlertPublisher.UPDATED, updated);
+        return updated;
+    }
+
+    /** Removes an alert with its history. The next matching event opens a new alert. */
+    public void delete(Caller caller, String alertId) {
+        Alert alert = require(caller, alertId);
+        alerts.delete(caller.orgId(), alert.alertId());
+        if (alert.status() != Alert.Status.RESOLVED) {
+            alerts.release(alert.fingerprint());
+        }
+        publisher.publish(AlertPublisher.DELETED, alert);
+    }
+
+    /**
      * Notifies everyone in the rule's current routing again. Throttling does not
      * apply, because a person asked for it; the timeline records who did.
      */

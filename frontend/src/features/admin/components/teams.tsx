@@ -1,3 +1,4 @@
+import { plural } from "#lib/plural.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
@@ -9,17 +10,20 @@ import { Plus, SlidersHorizontal, Users } from "lucide-react";
 import { useState } from "react";
 
 export function TeamList() {
-  const { data, teamId, setTeamId, commit, setCompactDetail } = useWorkspaceContext(),
+  const { data, teamId, setTeamId, commit, setCompactDetail, account } = useWorkspaceContext(),
     [create, setCreate] = useState(false);
   return (
     <Box
       title="Teams"
       icon={Users}
       extra={
-        <button onClick={() => setCreate(true)}>
-          <Plus />
-          Create team
-        </button>
+        // On the backend a company is one team, so there is nothing to create.
+        !account && (
+          <button onClick={() => setCreate(true)}>
+            <Plus />
+            Create team
+          </button>
+        )
       }
     >
       <div className="record-list">
@@ -35,7 +39,7 @@ export function TeamList() {
             <span>
               <strong>{t.name}</strong>
               <small>
-                {data.members.filter((m) => m.team === t.id).length} members
+                {plural(data.members.filter((m) => m.team === t.id).length, "member")}
               </small>
             </span>
           </button>

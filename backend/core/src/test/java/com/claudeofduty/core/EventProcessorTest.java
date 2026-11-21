@@ -198,7 +198,7 @@ class EventProcessorTest {
     @Test
     void ruleWithoutPresentationFallsBackToRuleNameAndMessage() {
         rules = List.of(new Rule(rule.ruleId(), rule.orgId(), rule.sourceId(), rule.name(), true, rule.match(),
-                Severity.WARNING, null, null, null, null, null, null, null, null));
+                Severity.WARNING, null, null, null, null, null, null, null, null, null));
 
         processor.process(List.of(timeout("payment-api"), timeout("checkout-api")));
 
@@ -289,7 +289,8 @@ class EventProcessorTest {
                     stored.fingerprint(), stored.severity(), stored.status(), stored.title(), stored.body(),
                     stored.fields(), stored.count() + added.count(), stored.firstSeenAt(), added.lastSeenAt(),
                     stored.sampleEvent(), stored.runbookId(), stored.assigneeId(), stored.acknowledgedBy(),
-                    stored.acknowledgedAt(), stored.resolvedBy(), stored.resolvedAt(), stored.timing()));
+                    stored.acknowledgedAt(), stored.resolvedBy(), stored.resolvedAt(), stored.timing(),
+                    stored.checkedSteps()));
         }
 
         @Override

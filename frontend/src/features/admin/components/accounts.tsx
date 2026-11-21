@@ -48,7 +48,7 @@ export function AccountList() {
   );
 }
 export function CreateAccount() {
-  const { data, commit } = useWorkspaceContext(),
+  const { data, commit, account } = useWorkspaceContext(),
     [error, setError] = useState("");
   return (
     <Box title="Create account" icon={UserPlus}>
@@ -96,7 +96,8 @@ export function CreateAccount() {
         </Field>
         <Field label="Assign to team">
           <select name="team">
-            <option value="">Without a team</option>
+            {/* On the backend an account is created as a member of the team. */}
+            {!account && <option value="">Without a team</option>}
             {data.teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}

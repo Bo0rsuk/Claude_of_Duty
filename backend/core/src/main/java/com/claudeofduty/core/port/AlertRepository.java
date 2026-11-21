@@ -22,6 +22,9 @@ public interface AlertRepository {
      */
     Optional<Alert> update(String orgId, String alertId, Map<String, Object> changes);
 
+    /** Removes an alert and its timeline. Does nothing when the alert does not exist. */
+    void delete(String orgId, String alertId);
+
     /** Entries of an alert, oldest first. */
     List<TimelineEntry> timeline(String alertId);
 

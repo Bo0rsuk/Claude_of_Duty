@@ -7,9 +7,63 @@ export function TeamAccess({ access, changeAccess }: {
   access: string;
   changeAccess: (access: string) => void;
 }) {
-  const { data, commit, setPrototype } = useWorkspaceContext();
+  const { data, commit, setPrototype, account } = useWorkspaceContext();
   const [join, setJoin] = useState("");
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (account) {
+    const run = (action: Promise<void>) => {
+      setBusy(true);
+      setError("");
+      action.catch((failure: Error) => setError(failure.message)).finally(() => setBusy(false));
+    };
+    return (
+      <section className="surface join">
+        <h2>Join your team</h2>
+        <p>Enter the code your admin shared, or start a new team and invite others.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(account.join(join.trim()));
+          }}
+        >
+          <Field label="Team code">
+            <input
+              required
+              autoComplete="off"
+              spellCheck={false}
+              value={join}
+              onChange={(e) => setJoin(e.target.value)}
+              placeholder="ABCD-EFGH"
+            />
+          </Field>
+          <button className="primary" disabled={busy}>
+            Join team
+          </button>
+        </form>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(account.create(name.trim()));
+          }}
+        >
+          <Field label="New team name">
+            <input required pattern=".*\S.*" value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <button disabled={busy}>Create a team</button>
+        </form>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <div className="buttons">
+          <button onClick={() => account.signOut()}>Sign out</button>
+        </div>
+      </section>
+    );
+  }
   if (access === "Signed out")
     return (
       <section className="surface">

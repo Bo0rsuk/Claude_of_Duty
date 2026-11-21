@@ -1,8 +1,11 @@
+import { plural } from "#lib/plural.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
 import { Save } from "#components/save.tsx";
+import { GroupContacts } from "#features/groups-and-runbooks/components/group-contacts.tsx";
+import { GroupDelete } from "#features/groups-and-runbooks/components/group-delete.tsx";
 import { StatusTag } from "#components/status-tag.tsx";
 import { homeTeam, useWorkspaceContext } from "#features/workspace";
 import { unique } from "#lib/id.ts";
@@ -37,9 +40,8 @@ export function GroupList() {
             <span>
               <strong>{g.name}</strong>
               <small>
-                {g.members.length} members ·{" "}
-                {data.rules.filter((r) => r.targets.includes(g.name)).length}{" "}
-                rules
+                {plural(g.members.length + (g.contacts?.length ?? 0), "member")} ·{" "}
+                {plural(data.rules.filter((r) => r.targets.includes(g.name)).length, "rule")}
               </small>
             </span>
           </button>
@@ -124,6 +126,8 @@ export function GroupMembers() {
                 {m.duty && <StatusTag value="On call" />}
               </label>
             ))}
+          <GroupContacts group={g} />
+          <GroupDelete group={g} />
         </>
       ) : (
         <Empty title="Select a group" />

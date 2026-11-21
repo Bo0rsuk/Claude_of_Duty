@@ -1,12 +1,15 @@
 import { Box } from "#components/box.tsx";
 import { Field } from "#components/field.tsx";
 import { Assistant } from "#features/rules/components/assistant.tsx";
+import { ConditionBuilder } from "#features/rules/components/condition-builder.tsx";
+import { ChannelMessages } from "#features/rules/components/channel-messages.tsx";
 import {
   Grouping,
   SeveritySelector,
   Targets,
 } from "#features/rules/components/delivery-settings.tsx";
 import { MessagePreview } from "#features/rules/components/message-preview.tsx";
+import { RecipientLimit } from "#features/rules/components/recipient-limit.tsx";
 import { RuleActions } from "#features/rules/components/rule-actions.tsx";
 import { RuleRunbook } from "#features/rules/components/rule-runbook.tsx";
 import { type Rule, useWorkspaceContext } from "#features/workspace";
@@ -32,6 +35,15 @@ export function RuleEditor() {
           onChange={(e) => change("name", e.target.value)}
         />
       </Field>
+      <label className="check-line">
+        <input
+          type="checkbox"
+          checked={rule.enabled !== false}
+          onChange={(e) => editRule({ enabled: e.target.checked })}
+        />
+        Rule is on
+        {rule.enabled === false && <span className="hint"> · new events are not matched until it is turned on</span>}
+      </label>
       <Field label="Event source">
         <select
           value={rule.source}
@@ -42,12 +54,7 @@ export function RuleEditor() {
           ))}
         </select>
       </Field>
-      <Field label="Matching conditions">
-        <textarea
-          value={rule.conditions}
-          onChange={(e) => change("conditions", e.target.value)}
-        />
-      </Field>
+      <ConditionBuilder key={rule.id} />
       <details>
         <summary>
           <ListFilter />
@@ -61,6 +68,7 @@ export function RuleEditor() {
       <details>
         <summary>Grouping & limits</summary>
         <Grouping />
+        <RecipientLimit />
       </details>
       <details>
         <summary>
@@ -72,6 +80,7 @@ export function RuleEditor() {
       <details>
         <summary>Message template & preview</summary>
         <MessagePreview />
+        <ChannelMessages />
       </details>
       <RuleActions />
     </Box>

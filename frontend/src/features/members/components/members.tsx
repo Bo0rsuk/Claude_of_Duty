@@ -1,3 +1,4 @@
+import { PHONE_HELP, normalizePhone } from "#lib/phone.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
@@ -51,7 +52,7 @@ export function UserList() {
   );
 }
 export function ManageUser() {
-  const { data, role, memberId, commit } = useWorkspaceContext(),
+  const { data, role, memberId, commit, account } = useWorkspaceContext(),
     m = data.members.find(
       (m) => m.id === memberId && (role === "Admin" || m.team === homeTeam),
     );
@@ -66,11 +67,19 @@ export function ManageUser() {
             if (locked) return;
             const f = new FormData(e.currentTarget),
               name = String(f.get("name")),
-              next = {
+              phone = normalizePhone(String(f.get("phone")));
+            if (phone === null) {
+              // The browser shows the reason at the field, like its own checks do.
+              const field = e.currentTarget.elements.namedItem("phone") as HTMLInputElement;
+              field.setCustomValidity(PHONE_HELP);
+              field.reportValidity();
+              return;
+            }
+            const next = {
                 ...m,
                 name,
                 email: String(f.get("email")),
-                phone: String(f.get("phone")),
+                phone,
                 role: String(f.get("role")) as Member["role"],
               };
             commit(
@@ -99,13 +108,21 @@ export function ManageUser() {
               />
             </Field>
             <Field label="Phone">
-              <input type="tel" name="phone" defaultValue={m.phone} />
+              <input
+                type="tel"
+                name="phone"
+                defaultValue={m.phone}
+                placeholder="+48 600 100 200"
+                // Checked on save; typing again clears the message.
+                onInput={(e) => e.currentTarget.setCustomValidity("")}
+              />
             </Field>
             {!locked && (
               <Field label="Assigned role">
                 <select name="role" defaultValue={m.role}>
                   {[
-                    "Pending",
+                    // "Waiting for a role" exists in the demo only.
+                    ...(account ? [] : ["Pending"]),
                     ...roles.filter((r) => role === "Admin" || r !== "Admin"),
                   ].map((r) => (
                     <option key={r}>{r}</option>

@@ -1,5 +1,6 @@
+import { SampleEvent } from "#features/alerts/components/sample-event.tsx";
 import { type Alert, useWorkspaceContext } from "#features/workspace";
-import { clock } from "#lib/time.ts";
+import { stamp } from "#lib/time.ts";
 import {
   Bell,
   ChevronDown,
@@ -14,6 +15,7 @@ import {
   ShieldAlert,
   SlidersHorizontal,
   UserRound,
+  Users,
 } from "lucide-react";
 
 export function Overview({ a }: { a: Alert }) {
@@ -44,14 +46,23 @@ export function Overview({ a }: { a: Alert }) {
         <dd>{matchedRule?.name ?? "Archived rule"}</dd>
         <dt>
           <UserRound />
-          Assigned to
+          Owner
         </dt>
         <dd>
           <span className="person-dot">
             <UserRound size={12} />
           </span>
-          {a.target}
+          {(a.owner ?? a.target) || "Nobody yet"}
         </dd>
+        {a.notified !== undefined && (
+          <>
+            <dt>
+              <Users />
+              Notified
+            </dt>
+            <dd>{a.notified.length ? a.notified.join(", ") : "Nobody, the alert only appears in the feed"}</dd>
+          </>
+        )}
         <dt>
           <Radio />
           Channels
@@ -82,12 +93,12 @@ export function Overview({ a }: { a: Alert }) {
           <Clock3 />
           First seen
         </dt>
-        <dd>{clock(a.first)}</dd>
+        <dd>{stamp(a.first)}</dd>
       </dl>
       <div className="group-band">
         <Layers />
         <strong>{a.count} events grouped</strong>
-        <span>Last seen {clock(a.last)}</span>
+        <span>Last seen {stamp(a.last)}</span>
       </div>
       <section className="fields-section">
         <h3>
@@ -133,6 +144,7 @@ export function Overview({ a }: { a: Alert }) {
           </pre>
         </details>
       </section>
+      {a.sample && <SampleEvent sample={a.sample} />}
     </div>
   );
 }

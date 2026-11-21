@@ -16,3 +16,11 @@ test("activity counts group volume within the period and excludes resolved alert
   assert.equal(summary.samples[0], baseline[0] + 3);
   assert.equal(summary.samples.at(-1), baseline.at(-1) + 2);
 });
+
+test("an alert's events are spread over the time it has been firing", () => {
+  const hour = 3_600_000;
+  const none = Array(72).fill(0);
+  const { samples } = summarizeActivity([{ first: 0, last: hour, count: 2400, status: "Open" }], 1, hour, none);
+  assert.equal(samples.length, 24);
+  assert.ok(samples.every((count) => count === 100));
+});

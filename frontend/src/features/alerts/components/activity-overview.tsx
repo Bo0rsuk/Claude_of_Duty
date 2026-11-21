@@ -3,10 +3,18 @@ import { useWorkspaceContext } from "#features/workspace";
 import { Activity, Clock3 } from "lucide-react";
 import { useState } from "react";
 
+const NO_BACKGROUND = Array<number>(72).fill(0);
+
 export function ActivityOverview() {
-  const { data } = useWorkspaceContext(),
+  const { data, account } = useWorkspaceContext(),
     [period, setPeriod] = useState("24");
-  const { active, total, samples, max } = summarizeActivity(data.alerts, Number(period), Date.now());
+  const { active, total, samples, max } = summarizeActivity(
+    data.alerts,
+    Number(period),
+    Date.now(),
+    // The made-up background traffic belongs to the demo only.
+    account ? NO_BACKGROUND : undefined,
+  );
   return (
     <section className="surface activity-card">
       <header>
@@ -56,7 +64,7 @@ export function ActivityOverview() {
             className="bars"
             role="img"
             aria-label={
-              "Simulated inbound volume of " +
+              (account ? "Event volume of " : "Simulated inbound volume of ") +
               samples.reduce((sum, count) => sum + count, 0) +
               " events over " +
               period +

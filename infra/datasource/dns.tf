@@ -9,3 +9,13 @@ resource "aws_route53_record" "datasource" {
   ttl     = 60
   records = [aws_eip.this.public_ip]
 }
+
+resource "aws_route53_record" "frontend" {
+  count = var.frontend_domain != null && var.route53_zone_id != null ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = var.frontend_domain
+  type    = "A"
+  ttl     = 60
+  records = [aws_eip.this.public_ip]
+}

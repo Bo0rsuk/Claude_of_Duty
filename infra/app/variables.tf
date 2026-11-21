@@ -102,7 +102,7 @@ variable "push_key_parameter_prefix" {
 variable "push_contact" {
   description = "Contact that push services (Google, Apple, Mozilla) get with every push message, as a mailto: or https: URL."
   type        = string
-  default     = "mailto:alerts@waw-out.pl"
+  default     = "mailto:alerts@squawk.com.pl"
 }
 
 variable "gemini_model" {

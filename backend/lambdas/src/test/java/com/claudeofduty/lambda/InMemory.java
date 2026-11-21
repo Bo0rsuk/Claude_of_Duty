@@ -131,6 +131,14 @@ final class InMemory {
         }
 
         @Override
+        public void delete(String orgId, String alertId) {
+            if (find(orgId, alertId).isPresent()) {
+                alerts.remove(alertId);
+                entries.removeIf(entry -> entry.alertId().equals(alertId));
+            }
+        }
+
+        @Override
         public List<TimelineEntry> timeline(String alertId) {
             return entries.stream().filter(entry -> entry.alertId().equals(alertId)).toList();
         }

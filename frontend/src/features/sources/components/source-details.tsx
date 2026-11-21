@@ -1,11 +1,13 @@
+import { plural } from "#lib/plural.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
+import { SourceActions } from "#features/sources/components/source-actions.tsx";
 import { useWorkspaceContext } from "#features/workspace";
 import { relative } from "#lib/time.ts";
 import { FileCode2, GitBranch } from "lucide-react";
 
 export function SourceDetails() {
-  const { data, sourceId, setSourceFilter, navigate } = useWorkspaceContext(),
+  const { data, sourceId, setSourceFilter, navigate, account } = useWorkspaceContext(),
     s = data.sources.find((v) => v.id === sourceId);
   return (
     <Box title="Source details" icon={FileCode2}>
@@ -17,7 +19,7 @@ export function SourceDetails() {
             <dd>{s.type}</dd>
             <dt>Format</dt>
             <dd>{s.format}</dd>
-            <dt>Demo connection</dt>
+            <dt>{account ? (s.type === "Webhook" ? "Send events to" : "Connection") : "Demo connection"}</dt>
             <dd>{s.connection}</dd>
             <dt>Last received</dt>
             <dd>{relative(s.last)}</dd>
@@ -33,9 +35,9 @@ export function SourceDetails() {
             }}
           >
             <GitBranch />
-            View {data.rules.filter((r) => r.source === s.id).length} linked
-            rules
+            View {plural(data.rules.filter((r) => r.source === s.id).length, "linked rule")}
           </button>
+          <SourceActions key={s.ref ?? s.id} source={s} />
         </>
       ) : (
         <Empty title="Choose a source" />

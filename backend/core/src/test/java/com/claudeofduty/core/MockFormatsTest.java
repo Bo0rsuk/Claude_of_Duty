@@ -8,6 +8,7 @@ import com.claudeofduty.core.model.Level;
 import com.claudeofduty.core.model.NormalizedEvent;
 import com.claudeofduty.core.model.RawRecord;
 import com.claudeofduty.core.model.Source;
+import com.claudeofduty.core.model.Source.ParserConfig;
 import com.claudeofduty.core.parser.EventNormalizer;
 import com.claudeofduty.core.parser.ParserRegistry;
 import java.time.Instant;
@@ -135,6 +136,24 @@ class MockFormatsTest {
             assertEquals(RECEIVED_AT, event.eventTime());
             assertTrue(event.fields().isEmpty());
         }
+    }
+
+    @Test
+    void keyValueLine() {
+        RawRecord record = new RawRecord("record-1", "org-1", "src-1", RECEIVED_AT,
+                "ts=2026-11-20T20:59:22.373Z service=settlement level=error attempts=3 msg=\"queue is \\\"full\\\"\" empty=");
+        ParserConfig config = new ParserConfig("kv", null, null, "ts", "iso8601", "level", "msg");
+
+        NormalizedEvent event = normalizer.normalize(record, config).get(0);
+
+        assertEquals(Instant.parse("2026-11-20T20:59:22.373Z"), event.eventTime());
+        assertEquals(Level.ERROR, event.level());
+        assertEquals("queue is \"full\"", event.message());
+        assertEquals("settlement", event.fields().get("service"));
+        assertEquals("3", event.fields().get("attempts"));
+        assertEquals("", event.fields().get("empty"));
+        assertEquals("no pairs here", normalizer.normalize(
+                new RawRecord("r", "org-1", "src-1", RECEIVED_AT, "no pairs here"), config).get(0).message());
     }
 
     @Test

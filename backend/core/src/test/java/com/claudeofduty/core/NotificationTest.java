@@ -15,11 +15,13 @@ import com.claudeofduty.core.model.RecipientGroup;
 import com.claudeofduty.core.model.RecipientGroup.GroupMember;
 import com.claudeofduty.core.model.Rule;
 import com.claudeofduty.core.model.Rule.ChannelTemplate;
+import com.claudeofduty.core.model.Rule.Delivery;
 import com.claudeofduty.core.model.Rule.Limit;
 import com.claudeofduty.core.model.Rule.Presentation;
 import com.claudeofduty.core.model.Rule.Route;
 import com.claudeofduty.core.model.Rule.Target;
 import com.claudeofduty.core.model.Rule.Throttle;
+import com.claudeofduty.core.model.Rule.Window;
 import com.claudeofduty.core.model.Severity;
 import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.model.TimelineEntry;
@@ -145,6 +147,36 @@ class NotificationTest {
         assertEquals(List.of(new Suppressed("email", "noc@example.pl", "perRule")), plan.suppressed());
         // The counter is tied to the 5-minute window the moment falls into.
         assertEquals(List.of("rule#rule-1#" + NOW.getEpochSecond() / 300 * 300), List.copyOf(counters.keySet()));
+    }
+
+    @Test
+    void outsideTheDeliveryWindowRecipientsAreReachedOnTheFallbackChannelOrNotAtAll() {
+        Route[] routing = {route("sms", "group", "grp-1"), route("ui", "user", "anna"), route("sms", "address", "+48500600700")};
+        // The clock reads 21:00 UTC, which is 22:00 in Warsaw.
+        Rule daytime = rule(null, null, new Delivery(new Window("08:00", "20:00", "Europe/Warsaw"), "email"), routing);
+
+        Plan plan = planner.plan(alert(), daytime, source());
+
+        // Everyone the routing names, once, by email. The bare phone number has no email address.
+        assertEquals(List.of("email anna@example.pl", "email bob@example.pl", "email noc@example.pl"), addresses(plan));
+        assertTrue(plan.suppressed().isEmpty());
+
+        // The window is read in its own time zone, and may run over midnight.
+        Rule evening = rule(null, null, new Delivery(new Window("21:30", "06:00", "Europe/Warsaw"), "email"), routing);
+        assertEquals(List.of("sms +48600100200", "sms +48221002000", "ui anna", "sms +48500600700"),
+                addresses(planner.plan(alert(), evening, source())));
+        Rule utc = rule(null, null, new Delivery(new Window("21:30", "06:00", null), "email"), routing);
+        assertEquals(3, planner.plan(alert(), utc, source()).jobs().size());
+
+        // Without a fallback channel nothing is sent, and the timeline says why.
+        Rule silent = rule(null, null, new Delivery(new Window("08:00", "20:00", "Europe/Warsaw"), null), routing);
+        Plan held = planner.plan(alert(), silent, source());
+        assertTrue(held.jobs().isEmpty());
+        assertEquals(new Suppressed("sms", "+48600100200", "deliveryWindow"), held.suppressed().get(0));
+        assertEquals(4, held.suppressed().size());
+
+        // A resend that a person asked for goes out on the rule's own channels at any hour.
+        assertEquals(4, planner.plan(alert(), silent, source(), false).jobs().size());
     }
 
     @Test
@@ -275,8 +307,12 @@ class NotificationTest {
     }
 
     private static Rule rule(Presentation presentation, Throttle throttle, Route... routing) {
+        return rule(presentation, throttle, null, routing);
+    }
+
+    private static Rule rule(Presentation presentation, Throttle throttle, Delivery delivery, Route... routing) {
         return new Rule("rule-1", "org-1", "src-1", "Payment database timeouts", true, null, Severity.CRITICAL,
-                List.of(routing), presentation, List.of(), throttle, null, NOW, NOW, null);
+                List.of(routing), presentation, List.of(), throttle, null, NOW, NOW, null, delivery);
     }
 
     private static Source source() {
@@ -294,7 +330,7 @@ class NotificationTest {
         shown.put("http.status", 503);
         return new Alert("alert-1", "org-1", "rule-1", "Payment database timeouts", "src-1", "fp", Severity.CRITICAL,
                 Alert.Status.OPEN, "payment-api: DB_TIMEOUT", "Timeout on payment-api-1", shown, 7, NOW, NOW, event,
-                null, null, null, null, null, null, new Alert.Timing(RECEIVED_AT, NOW));
+                null, null, null, null, null, null, new Alert.Timing(RECEIVED_AT, NOW), null);
     }
 
     private static final class Groups implements Repository<RecipientGroup> {

@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.claudeofduty.core.api.ApiException;
+import com.claudeofduty.core.port.UserDirectory;
 import com.claudeofduty.core.json.Json;
 import com.claudeofduty.core.model.Alert;
 import com.claudeofduty.core.model.Level;
@@ -55,7 +57,22 @@ class ApiHandlerTest {
 
     private final ApiHandler api = new ApiHandler(Services.create(new Services.Ports(
             sources, rules, groups, runbooks, members,
-            (userId, orgId) -> organizationOnRecord.put(userId, orgId == null ? "" : orgId),
+            new UserDirectory() {
+                @Override
+                public void setOrganization(String userId, String orgId) {
+                    organizationOnRecord.put(userId, orgId == null ? "" : orgId);
+                }
+
+                @Override
+                public String createUser(String email, String orgId) {
+                    String userId = email.substring(0, email.indexOf('@'));
+                    if (organizationOnRecord.containsKey(userId)) {
+                        throw ApiException.conflict(email + " already has an account");
+                    }
+                    organizationOnRecord.put(userId, orgId);
+                    return userId;
+                }
+            },
             alerts,
             (type, alert) -> published.add(type + " " + alert.status()),
             new RecentEvents() {
@@ -125,6 +142,26 @@ class ApiHandlerTest {
         assertEquals(200, call("anna", "PATCH", "/members/bob", "{\"role\": \"team_lead\"}").status);
         assertEquals(201, call("bob", "POST", "/sources", WEBHOOK_SOURCE).status);
         assertEquals(403, call("bob", "POST", "/org/invite-code", null).status);
+    }
+
+    @Test
+    void adminAddsAPersonByEmailWhoIsThenAMemberWithTheChosenRole() {
+        createOrganization("anna");
+        String orgId = members.findMember("anna").orElseThrow().orgId();
+
+        Result added = call("anna", "POST", "/members",
+                "{\"email\": \" Bob@Example.pl \", \"name\": \"Bob\", \"role\": \"team_lead\"}");
+        assertEquals(201, added.status);
+        assertEquals("bob", added.body.get("userId").asText());
+        assertEquals("bob@example.pl", added.body.get("email").asText());
+        // The account is created already in the organization, so Bob's first token carries it.
+        assertEquals(orgId, organizationOnRecord.get("bob"));
+        assertEquals("team_lead", call("bob", "GET", "/me", null).body.get("org").get("role").asText());
+
+        assertEquals("user", call("anna", "POST", "/members", "{\"email\": \"carl@example.pl\"}").body.get("role").asText());
+        assertEquals(409, call("anna", "POST", "/members", "{\"email\": \"bob@example.pl\"}").status);
+        assertEquals(400, call("anna", "POST", "/members", "{\"email\": \"not an address\"}").status);
+        assertEquals(403, call("carl", "POST", "/members", "{\"email\": \"dan@example.pl\"}").status);
     }
 
     @Test
@@ -316,7 +353,7 @@ class ApiHandlerTest {
         alerts.alerts.put(original.alertId(), new Alert(original.alertId(), orgId, ruleId, "Errors", sourceId,
                 original.fingerprint(), original.severity(), original.status(), original.title(), original.body(),
                 original.fields(), original.count(), original.firstSeenAt(), original.lastSeenAt(), null, null,
-                null, null, null, null, null, original.timing()));
+                null, null, null, null, null, original.timing(), null));
 
         Result resent = call("anna", "POST", "/alerts/" + original.alertId() + "/resend", null);
 
@@ -387,6 +424,110 @@ class ApiHandlerTest {
     }
 
     @Test
+    void runbookStepsTickedOnAnAlertAreSharedByEveryoneLookingAtIt() {
+        String code = createOrganization("anna");
+        call("bob", "POST", "/orgs/join", "{\"inviteCode\": \"" + code + "\"}");
+        String orgId = members.findMember("anna").orElseThrow().orgId();
+        alerts.alerts.put("1795208362373-aaaaaaaa", alert("1795208362373-aaaaaaaa", orgId, Severity.CRITICAL));
+        String path = "/alerts/1795208362373-aaaaaaaa";
+
+        // A plain user works through the runbook too.
+        JsonNode ticked = call("bob", "PUT", path + "/runbook-steps", "{\"checked\": [2, 0, 2]}").body;
+
+        assertEquals("[0,2]", ticked.get("checkedSteps").toString());
+        assertEquals("[0,2]", call("anna", "GET", path, null).body.get("checkedSteps").toString());
+        assertEquals("[0,2]", call("anna", "GET", "/alerts", null).body.get("items").get(0).get("checkedSteps").toString());
+        assertEquals(List.of("alert.updated OPEN"), published);
+        assertEquals("[]", call("anna", "PUT", path + "/runbook-steps", "{\"checked\": []}").body.get("checkedSteps").toString());
+        assertInvalid("step positions", call("anna", "PUT", path + "/runbook-steps", "{\"checked\": [-1]}"));
+        assertInvalid("step positions", call("anna", "PUT", path + "/runbook-steps", "{\"checked\": [\"first\"]}"));
+        assertInvalid("step positions", call("anna", "PUT", path + "/runbook-steps", "{}"));
+        assertEquals(404, call("anna", "PUT", "/alerts/missing/runbook-steps", "{\"checked\": []}").status);
+    }
+
+    @Test
+    void teamLeadDeletesAnAlertWithItsHistory() {
+        String code = createOrganization("anna");
+        call("bob", "POST", "/orgs/join", "{\"inviteCode\": \"" + code + "\"}");
+        String orgId = members.findMember("anna").orElseThrow().orgId();
+        alerts.alerts.put("1795208362373-aaaaaaaa", alert("1795208362373-aaaaaaaa", orgId, Severity.CRITICAL));
+        alerts.alerts.put("1795208362999-bbbbbbbb", alert("1795208362999-bbbbbbbb", orgId, Severity.WARNING));
+        alerts.alerts.put("1795208363000-cccccccc", alert("1795208363000-cccccccc", "another-org", Severity.CRITICAL));
+        String path = "/alerts/1795208362373-aaaaaaaa";
+        call("anna", "POST", path + "/notes", "{\"text\": \"False alarm\"}");
+        published.clear();
+
+        assertEquals(403, call("bob", "DELETE", path, null).status);
+        assertEquals(204, call("anna", "DELETE", path, null).status);
+
+        assertEquals(404, call("anna", "GET", path, null).status);
+        assertEquals(List.of("1795208362999-bbbbbbbb"), ids(call("anna", "GET", "/alerts", null).body));
+        assertTrue(alerts.entries.isEmpty());
+        // The alert was still open, so the next matching event must open a new one.
+        assertEquals(List.of("fingerprint-1795208362373-aaaaaaaa"), alerts.released);
+        assertEquals(List.of("alert.deleted OPEN"), published);
+        assertEquals(404, call("anna", "DELETE", path, null).status);
+        assertEquals(404, call("anna", "DELETE", "/alerts/1795208363000-cccccccc", null).status);
+        assertTrue(alerts.alerts.containsKey("1795208363000-cccccccc"));
+    }
+
+    @Test
+    void adminSetsAnotherMembersNameAndPhone() {
+        String code = createOrganization("anna");
+        call("bob", "POST", "/orgs/join", "{\"inviteCode\": \"" + code + "\"}");
+
+        JsonNode updated = call("anna", "PATCH", "/members/bob",
+                "{\"name\": \" Bob Kowalski \", \"phone\": \"+48600100300\"}").body;
+
+        assertEquals("Bob Kowalski", updated.get("name").asText());
+        assertEquals("+48600100300", updated.get("phone").asText());
+        assertEquals("user", updated.get("role").asText());
+        // Role and details can change in one request, and a blank phone removes the number.
+        JsonNode promoted = call("anna", "PATCH", "/members/bob", "{\"role\": \"team_lead\", \"phone\": \"\"}").body;
+        assertEquals("team_lead", promoted.get("role").asText());
+        assertEquals("Bob Kowalski", promoted.get("name").asText());
+        assertFalse(promoted.hasNonNull("phone"));
+        assertEquals("Bob Kowalski", call("bob", "GET", "/me", null).body.get("name").asText());
+
+        assertInvalid("international form", call("anna", "PATCH", "/members/bob", "{\"phone\": \"600100300\"}"));
+        assertInvalid("Send a role", call("anna", "PATCH", "/members/bob", "{}"));
+        assertEquals(403, call("bob", "PATCH", "/members/anna", "{\"name\": \"Changed\"}").status);
+        assertEquals(404, call("anna", "PATCH", "/members/stranger", "{\"name\": \"Nobody\"}").status);
+    }
+
+    @Test
+    void ruleCarriesADeliveryWindowWithAFallbackChannel() {
+        createOrganization("anna");
+        String sourceId = call("anna", "POST", "/sources", WEBHOOK_SOURCE).body.get("sourceId").asText();
+        String rule = "{\"name\": \"Errors\", \"sourceId\": \"" + sourceId + "\", \"severity\": \"WARNING\","
+                + " \"match\": {\"mode\": \"all\", \"conditions\": []}, \"delivery\": %s}";
+        String window = "{\"window\": {\"from\": \"%s\", \"to\": \"%s\", \"timezone\": \"%s\"}, \"outsideWindow\": %s}";
+
+        Result created = call("anna", "POST", "/rules",
+                rule.formatted(window.formatted("08:00", "20:00", "Europe/Warsaw", "\"email\"")));
+
+        assertEquals(201, created.status);
+        String ruleId = created.body.get("ruleId").asText();
+        JsonNode stored = call("anna", "GET", "/rules/" + ruleId, null).body.get("delivery");
+        assertEquals("08:00", stored.get("window").get("from").asText());
+        assertEquals("Europe/Warsaw", stored.get("window").get("timezone").asText());
+        assertEquals("email", stored.get("outsideWindow").asText());
+        // A rule without the setting notifies at any hour.
+        assertFalse(call("anna", "PUT", "/rules/" + ruleId, rule.formatted("null")).body.hasNonNull("delivery"));
+
+        assertInvalid("times of day", call("anna", "POST", "/rules",
+                rule.formatted(window.formatted("8", "20:00", "Europe/Warsaw", "null"))));
+        assertInvalid("must differ", call("anna", "POST", "/rules",
+                rule.formatted(window.formatted("08:00", "08:00", "Europe/Warsaw", "null"))));
+        assertInvalid("time zone name", call("anna", "POST", "/rules",
+                rule.formatted(window.formatted("08:00", "20:00", "Mars/Olympus", "null"))));
+        assertInvalid("must be a channel", call("anna", "POST", "/rules",
+                rule.formatted(window.formatted("08:00", "20:00", "Europe/Warsaw", "\"pigeon\""))));
+        assertInvalid("delivery.window is required", call("anna", "POST", "/rules",
+                rule.formatted("{\"outsideWindow\": \"email\"}")));
+    }
+
+    @Test
     void requestsOutsideTheRulesGetClearErrors() {
         assertEquals(404, call("anna", "GET", "/nothing-here", null).status);
         // A browser's preflight has no token and must still succeed.
@@ -420,7 +561,7 @@ class ApiHandlerTest {
         return new Alert(alertId, orgId, "rule-1", "Payment database timeouts", "src-1", "fingerprint-" + alertId,
                 severity, Alert.Status.OPEN, "payment-api: DB_TIMEOUT", "Timeout on payment-api-1",
                 Map.of("service", "payment-api"), 3, NOW, NOW, null, "rb-1",
-                null, null, null, null, null, new Alert.Timing(NOW, NOW));
+                null, null, null, null, null, new Alert.Timing(NOW, NOW), null);
     }
 
     private record Result(int status, JsonNode body) {
