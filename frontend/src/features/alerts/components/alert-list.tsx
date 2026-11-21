@@ -1,6 +1,8 @@
+import { Badge } from "#components/badge.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
+import { StatusTag } from "#components/status-tag.tsx";
 import { buildAlertFeed } from "#features/alerts/domain/alert-feed.ts";
 import { addAction } from "#features/alerts/utils/add-action.ts";
 import {
@@ -251,15 +253,10 @@ export function AlertList() {
                       />
                     </td>
                     <td>
-                      <span
-                        className={
-                          "feed-severity " +
-                          a.severity.toLowerCase() +
-                          (a.status === "Resolved" ? " resolved" : "")
-                        }
-                      >
-                        {a.severity}
-                      </span>
+                      <Badge
+                        severity={a.severity}
+                        resolved={a.status === "Resolved"}
+                      />
                     </td>
                     <td>
                       <button
@@ -292,9 +289,7 @@ export function AlertList() {
                       </span>
                     </td>
                     <td>
-                      <span className={"feed-status " + a.status.toLowerCase()}>
-                        {a.status}
-                      </span>
+                      <StatusTag value={a.status} />
                     </td>
                     <td>{a.target}</td>
                     <td className="number-cell">

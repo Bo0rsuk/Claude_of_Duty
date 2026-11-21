@@ -1,8 +1,16 @@
-export function StatusTag({ value }: { value: string }) {
-  return (
-    <span className={"status " + value.toLowerCase()}>
-      <i />
-      {value}
-    </span>
-  );
+type Tone = "neutral" | "info" | "positive";
+
+const alertTones: Record<string, Tone> = {
+  Acknowledged: "info",
+  Resolved: "positive",
+};
+
+export function StatusTag({
+  value,
+  tone = alertTones[value] ?? "neutral",
+}: {
+  value: string;
+  tone?: Tone;
+}) {
+  return <span className={"status-badge " + tone}>{value}</span>;
 }

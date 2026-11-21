@@ -1,16 +1,20 @@
 import type { Severity } from "#features/workspace";
-import { CircleAlert, Info, type LucideIcon, TriangleAlert } from "lucide-react";
 
-const severityIcons: Record<Severity, LucideIcon> = {
-  Critical: CircleAlert,
-  Warning: TriangleAlert,
-  Info,
-};
-export function Badge({ severity }: { severity: Severity }) {
-  const Icon = severityIcons[severity];
+export function Badge({
+  severity,
+  resolved = false,
+}: {
+  severity: Severity;
+  resolved?: boolean;
+}) {
   return (
-    <span className={"badge " + severity.toLowerCase()}>
-      <Icon size={13} />
+    <span
+      className={
+        "severity-badge " +
+        severity.toLowerCase() +
+        (resolved ? " resolved" : "")
+      }
+    >
       {severity}
     </span>
   );

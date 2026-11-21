@@ -30,14 +30,6 @@ const titles: Record<Panel, string> = {
   Users: "Team members",
   Admin: "Administration",
 };
-const descriptions: Record<Exclude<Panel, "Alerts">, string> = {
-  Custom: "Arrange the tools you use across your workspace.",
-  Rules: "Define which events reach your team and how they arrive.",
-  Sources: "Inspect incoming events and connect demo sources.",
-  "Groups & runbooks": "Organize recipients and the instructions they follow.",
-  Users: "Manage team membership, roles and assigned rules.",
-  Admin: "Manage company teams, accounts and join codes.",
-};
 export function App() {
   const {
     data,
@@ -201,28 +193,20 @@ export function App() {
             <ChevronRight />
             <strong>{access === "Assigned" ? panel : "Join team"}</strong>
           </div>
-          {alertWorkspace && !editing && (
-            <div className="alert-toolbar" role="group" aria-label="Alert workspace controls">
+          {customizeButton && (
+            <div className="view-toolbar" role="group" aria-label="View controls">
               {customizeButton}
             </div>
           )}
         </header>
         <main id="main" tabIndex={-1} ref={main} aria-label={alertWorkspace ? "Alerts" : undefined}>
-          {alertWorkspace ? (
-            <h1 className="sr">Alerts</h1>
-          ) : (
-            <div className="page-heading">
-              <div>
-                <h1>{access === "Assigned" ? titles[panel] : "Team access"}</h1>
-                <p>
-                  {access === "Assigned" && panel !== "Alerts"
-                    ? descriptions[panel]
-                    : "Manage your demo workspace access."}
-                </p>
-              </div>
-              {customizeButton}
-            </div>
-          )}
+          <h1 className="sr">
+            {alertWorkspace
+              ? "Alerts"
+              : access === "Assigned"
+                ? titles[panel]
+                : "Team access"}
+          </h1>
           {content}
         </main>
       </div>
