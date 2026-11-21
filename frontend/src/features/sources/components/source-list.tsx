@@ -2,6 +2,7 @@ import { plural } from "#lib/plural.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
+import { StatusTag } from "#components/status-tag.tsx";
 import { SourceWizard } from "#features/sources/components/source-wizard.tsx";
 import { useWorkspaceContext } from "#features/workspace";
 import { relative } from "#lib/time.ts";
@@ -49,7 +50,10 @@ export function SourceList() {
               </small>
               <small>Last event {relative(s.last)}</small>
             </span>
-            <span className={s.enabled === false ? "draft" : "healthy"}>{s.enabled === false ? "Off" : "Receiving"}</span>
+            <StatusTag
+              value={s.enabled === false ? "Off" : "Receiving"}
+              tone={s.enabled === false ? "neutral" : "positive"}
+            />
           </button>
         ))}
       </div>
