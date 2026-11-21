@@ -1,0 +1,84 @@
+[
+  {
+    "name": "JSON API",
+    "connector": {
+      "type": "http-pull",
+      "url": "https://datasource.waw-out.pl/api/events",
+      "intervalSeconds": 5,
+      "itemsPath": "items",
+      "cursorParam": "after",
+      "cursorFrom": "body:next_after"
+    },
+    "parser": {
+      "format": "json",
+      "eventTime": "timestamp",
+      "timeFormat": "iso8601",
+      "level": "level",
+      "message": "message"
+    }
+  },
+  {
+    "name": "Application log (log4j style)",
+    "connector": {
+      "type": "http-pull",
+      "url": "https://datasource.waw-out.pl/logs",
+      "intervalSeconds": 5,
+      "cursorParam": "after",
+      "cursorFrom": "header:X-Next-After"
+    },
+    "parser": {
+      "format": "regex",
+      "eventTime": "timestamp",
+      "timeFormat": "yyyy-MM-dd HH:mm:ss,SSS",
+      "level": "level",
+      "message": "message",
+      "pattern": "^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}) (?<level>\\w+)\\s+\\[(?<service>[^\\]]+)\\] \\[(?<host>[^\\]]+)\\] \\[trace=(?<traceId>[^\\]]+)\\] (?<code>\\S+) - (?<message>.*)$"
+    }
+  },
+  {
+    "name": "Access log (nginx combined)",
+    "connector": {
+      "type": "http-pull",
+      "url": "https://datasource.waw-out.pl/logs/access",
+      "intervalSeconds": 5,
+      "cursorParam": "after",
+      "cursorFrom": "header:X-Next-After"
+    },
+    "parser": {
+      "format": "regex",
+      "eventTime": "timestamp",
+      "timeFormat": "dd/MMM/yyyy:HH:mm:ss Z",
+      "pattern": "^(?<clientIp>\\S+) \\S+ \\S+ \\[(?<timestamp>[^\\]]+)\\] \"(?<method>\\S+) (?<path>\\S+) [^\"]*\" (?<status>\\d{3}) (?<bytes>\\d+) \"[^\"]*\" \"(?<userAgent>[^\"]*)\" (?<requestTime>[\\d.]+)$"
+    }
+  },
+  {
+    "name": "Kafka topic",
+    "connector": {
+      "type": "kafka",
+      "bootstrapServers": "datasource.waw-out.pl:9092",
+      "topic": "infra.events",
+      "groupId": "claude-of-duty"
+    },
+    "parser": {
+      "format": "json",
+      "eventTime": "ts",
+      "timeFormat": "epoch_millis",
+      "level": "severity",
+      "message": "summary"
+    }
+  },
+  {
+    "name": "Webhook (Alertmanager style)",
+    "connector": {
+      "type": "webhook"
+    },
+    "parser": {
+      "format": "json",
+      "split": "alerts",
+      "eventTime": "startsAt",
+      "timeFormat": "iso8601",
+      "level": "labels.severity",
+      "message": "annotations.summary"
+    }
+  }
+]

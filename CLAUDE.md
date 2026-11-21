@@ -17,3 +17,4 @@ Shared instructions for all agents working in this repo (multiple users).
 - Do not commit secrets (`.env`, credentials, `.claude/settings.local.json`).
 - Do not force-push shared branches.
 - Full strategy: see `CONTRIBUTING.md`.
+- Never perform terraform apply automatically, it is always performed manually

@@ -9,6 +9,7 @@ Thumbs.db
 node_modules/
 dist/
 build/
+target/
 __pycache__/
 *.pyc
 .env
@@ -18,3 +19,8 @@ __pycache__/
 .terraform/
 *.tfstate
 *.tfstate.*
+# Local copy of the demo rule with a real phone number and email address
+demo/requests/rule-notify-me.json
+demo/requests/rule-push-me.json
+# Environment-specific settings of the push test page, generated from Terraform outputs
+demo/push-test/config.json

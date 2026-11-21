@@ -1,0 +1,48 @@
+{
+  "name": "Errors from monitoring",
+  "sourceId": "mock-webhook",
+  "severity": "CRITICAL",
+  "match": {
+    "mode": "all",
+    "conditions": [
+      {
+        "field": "level",
+        "op": "in",
+        "value": [
+          "ERROR",
+          "FATAL"
+        ]
+      }
+    ]
+  },
+  "routing": [
+    {
+      "channel": "sms",
+      "target": {
+        "type": "address",
+        "value": "+48000000000"
+      }
+    },
+    {
+      "channel": "email",
+      "target": {
+        "type": "address",
+        "value": "you@example.com"
+      }
+    }
+  ],
+  "presentation": {
+    "title": "{{labels.service}}: {{labels.alertname}}",
+    "body": "{{message}} on {{labels.instance}}",
+    "fields": [
+      "labels.alertname",
+      "labels.service",
+      "labels.instance",
+      "level"
+    ]
+  },
+  "groupBy": [
+    "labels.service",
+    "labels.alertname"
+  ]
+}

@@ -1,0 +1,4 @@
+{
+  "sourceId": "mock-json-api",
+  "goal": "Obudź mnie, gdy payment-api zwraca błędy serwera albo brakuje pamięci"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Claude of Duty - push test",
+  "short_name": "CoD push",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b91c1c"
+}
