@@ -1,3 +1,4 @@
+import { PHONE_HELP, normalizePhone } from "#lib/phone.ts";
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
 import { Save } from "#components/save.tsx";
@@ -66,7 +67,12 @@ export function GroupContacts({ group }: { group: Group }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const contact = { name: draft.name.trim(), email: draft.email.trim(), phone: draft.phone.trim() };
+              const phone = normalizePhone(draft.phone);
+              if (phone === null) {
+                setError(PHONE_HELP);
+                return;
+              }
+              const contact = { name: draft.name.trim(), email: draft.email.trim(), phone };
               if (!contact.email && !contact.phone) {
                 setError("Enter an email address or a phone number, so the contact can be reached.");
                 return;
@@ -89,9 +95,7 @@ export function GroupContacts({ group }: { group: Group }) {
             <Field label="Phone · for SMS and calls">
               <input
                 type="tel"
-                pattern="\+\d{6,15}"
-                title="International form, for example +48600100200"
-                placeholder="+48600100200"
+                placeholder="+48 600 100 200"
                 value={draft.phone}
                 onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
               />
