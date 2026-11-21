@@ -36,5 +36,6 @@ function demoDraft(): Rule {
     runbook: "settlement",
     template: "{{service}} event",
     fields: "service, environment",
+    escalation: "",
   };
 }

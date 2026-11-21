@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.claudeofduty.core.json.Json;
+import com.claudeofduty.core.model.Alert;
 import com.claudeofduty.core.model.NotificationJob;
 import com.claudeofduty.core.notify.NotificationChannel;
 import com.claudeofduty.core.notify.NotificationDelivery;
@@ -19,6 +20,7 @@ import com.claudeofduty.aws.SqsNotificationQueue;
 import com.claudeofduty.aws.SsmSecret;
 import com.claudeofduty.lambda.channels.EmailChannel;
 import com.claudeofduty.lambda.channels.SimulatedVoiceChannel;
+import com.claudeofduty.lambda.channels.TwilioVoiceChannel;
 import com.claudeofduty.lambda.channels.SmsChannel;
 import com.claudeofduty.lambda.channels.UiChannel;
 import com.claudeofduty.lambda.channels.WebPushChannel;
@@ -86,6 +88,21 @@ public class NotifierHandler implements RequestHandler<SQSEvent, SQSBatchRespons
         return count == null ? 1 : Integer.parseInt(count);
     }
 
+    /** Real calls once a phone provider is configured; until then the call is only logged. */
+    private static NotificationChannel voiceChannel(SignedHttp signedHttp) {
+        if (!"twilio".equals(Env.get("VOICE_PROVIDER", ""))) {
+            return new SimulatedVoiceChannel();
+        }
+        String prefix = Env.get("TWILIO_PARAMETER_PREFIX", "/cod/twilio");
+        SsmSecret sid = new SsmSecret(signedHttp, AwsClients.region(), prefix + "-account-sid");
+        SsmSecret token = new SsmSecret(signedHttp, AwsClients.region(), prefix + "-auth-token");
+        SsmSecret from = new SsmSecret(signedHttp, AwsClients.region(), prefix + "-from-number");
+        // Written by Terraform: the address of GET/POST /voice/twiml on our API.
+        SsmSecret scriptUrl = new SsmSecret(signedHttp, AwsClients.region(), prefix + "-twiml-url");
+        return new TwilioVoiceChannel(
+                () -> new TwilioVoiceChannel.Account(sid.get(), token.get(), from.get(), scriptUrl.get()));
+    }
+
     private static NotificationDelivery defaultDelivery() {
         Clock clock = Clock.systemUTC();
         SignedHttp signedHttp = AwsClients.signedHttp();
@@ -106,7 +123,7 @@ public class NotifierHandler implements RequestHandler<SQSEvent, SQSBatchRespons
                         Env.get("VAPID_SUBJECT", "mailto:alerts@example.com"),
                         Env.get("APP_URL", ""),
                         clock),
-                "voice", new SimulatedVoiceChannel());
+                "voice", voiceChannel(signedHttp));
         DynamoAlertStore alerts = new DynamoAlertStore(AwsClients.dynamoDb());
         // Reads that find nothing and a message to a channel nobody subscribes to.
         Priming.run(
@@ -117,6 +134,10 @@ public class NotifierHandler implements RequestHandler<SQSEvent, SQSBatchRespons
                 channels,
                 new SqsNotificationQueue(AwsClients.sqs(), Env.required("NOTIFICATION_QUEUE_URLS")),
                 alerts::appendTimeline,
-                clock);
+                clock,
+                job -> alerts.find(job.orgId(), job.alertId())
+                        .map(alert -> alert.status() == Alert.Status.OPEN)
+                        // An alert that was deleted needs no further steps either.
+                        .orElse(false));
     }
 }

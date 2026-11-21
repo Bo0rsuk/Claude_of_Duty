@@ -1,14 +1,17 @@
 import { PHONE_HELP, normalizePhone } from "#lib/phone.ts";
 import { Box } from "#components/box.tsx";
+import { CloseDetail } from "#components/close-detail.tsx";
+import { MemberRules } from "#features/members/components/member-rules.tsx";
+import { roleDescriptions } from "#features/members/domain/role-descriptions.ts";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Save } from "#components/save.tsx";
-import { type Member, homeTeam, roles, useWorkspaceContext } from "#features/workspace";
+import { type Member, type Role, homeTeam, roles, useWorkspaceContext } from "#features/workspace";
 import { SlidersHorizontal, Users } from "lucide-react";
 import { useState } from "react";
 
 export function UserList() {
-  const { data, role, memberId, setMemberId, setCompactDetail } = useWorkspaceContext(),
+  const { data, role, memberId, setMemberId, setCompactDetail, compactDetail, panel } = useWorkspaceContext(),
     [q, setQ] = useState("");
   const rows = data.members.filter(
     (m) =>
@@ -28,7 +31,7 @@ export function UserList() {
         {rows.map((m) => (
           <button
             key={m.id}
-            aria-pressed={memberId === m.id}
+            aria-pressed={memberId === m.id && (panel !== "Users" || compactDetail)}
             onClick={() => {
               setMemberId(m.id);
               setCompactDetail(true);
@@ -57,8 +60,15 @@ export function ManageUser() {
       (m) => m.id === memberId && (role === "Admin" || m.team === homeTeam),
     );
   const locked = role !== "Admin" && m?.role === "Admin";
+  // The role chosen in the form before it is saved, for the description under the field.
+  const [choice, setChoice] = useState({ member: "", role: "" });
+  const picked = m && choice.member === m.id ? choice.role : (m?.role ?? "");
   return (
-    <Box title="Member details" icon={SlidersHorizontal}>
+    <Box
+      title={m ? m.name : "Member details"}
+      icon={SlidersHorizontal}
+      extra={<CloseDetail page="Users" label="Close member details" />}
+    >
       {m ? (
         <form
           key={JSON.stringify(m)}
@@ -118,21 +128,35 @@ export function ManageUser() {
               />
             </Field>
             {!locked && (
-              <Field label="Assigned role">
-                <select name="role" defaultValue={m.role}>
-                  {[
-                    // "Waiting for a role" exists in the demo only.
-                    ...(account ? [] : ["Pending"]),
-                    ...roles.filter((r) => role === "Admin" || r !== "Admin"),
-                  ].map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </select>
-              </Field>
+              // Hovering the field explains every role; the line below explains the one chosen.
+              <div className="role-field" title={roles.map((r) => r + ": " + roleDescriptions[r]).join("\n")}>
+                <Field label="Assigned role">
+                  <select name="role" defaultValue={m.role} onChange={(e) => setChoice({ member: m.id, role: e.target.value })}>
+                    {[
+                      // "Waiting for a role" exists in the demo only.
+                      ...(account ? [] : ["Pending"]),
+                      ...roles.filter((r) => role === "Admin" || r !== "Admin"),
+                    ].map((r) => (
+                      <option key={r} title={roleDescriptions[r as Role]}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <p className="hint">
+                  {roleDescriptions[picked as Role] ?? "Waiting for a role: no access until one is assigned."}
+                </p>
+              </div>
             )}
           </fieldset>
           {!locked && <Save label="Save member" />}
           {locked && <p>Admins manage this account.</p>}
+          {(role === "Admin" || m.role !== "Admin") && (
+            <fieldset className="member-rules">
+              <legend>Rules that notify {m.name}</legend>
+              <MemberRules member={m} />
+            </fieldset>
+          )}
         </form>
       ) : (
         <Empty title="Choose a team member" />

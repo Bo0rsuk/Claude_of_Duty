@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Delivers queued notifications and handles the ones that keep failing.
@@ -30,13 +31,21 @@ public final class NotificationDelivery {
     private final NotificationQueue queue;
     private final Consumer<TimelineEntry> timeline;
     private final Clock clock;
+    private final Predicate<NotificationJob> alertStillOpen;
 
     public NotificationDelivery(Map<String, NotificationChannel> channels, NotificationQueue queue,
             Consumer<TimelineEntry> timeline, Clock clock) {
+        this(channels, queue, timeline, clock, job -> true);
+    }
+
+    /** @param alertStillOpen tells whether the alert of a job is still waiting for someone to react */
+    public NotificationDelivery(Map<String, NotificationChannel> channels, NotificationQueue queue,
+            Consumer<TimelineEntry> timeline, Clock clock, Predicate<NotificationJob> alertStillOpen) {
         this.channels = channels;
         this.queue = queue;
         this.timeline = timeline;
         this.clock = clock;
+        this.alertStillOpen = alertStillOpen;
     }
 
     /**
@@ -47,6 +56,12 @@ public final class NotificationDelivery {
     public boolean deliver(NotificationJob job, int receiveCount) {
         int tryNumber = (job.attempt() - 1) * TRIES_PER_ROUND + receiveCount;
         Map<String, Object> detail = detail(job, tryNumber);
+        if (job.escalated() && receiveCount == 1 && job.attempt() == 1 && !alertStillOpen.test(job)) {
+            // Someone acknowledged or resolved the alert while this step waited: escalating further is noise.
+            record(job, TimelineEntry.Type.NOTIFICATION_SUPPRESSED, Map.of(
+                    "channel", job.channel(), "recipient", job.recipient().address(), "reason", "alertHandled"));
+            return true;
+        }
         try {
             NotificationChannel channel = channels.get(job.channel());
             if (channel == null) {

@@ -1,4 +1,5 @@
 import { Box } from "#components/box.tsx";
+import { CloseDetail } from "#components/close-detail.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Save } from "#components/save.tsx";
@@ -7,7 +8,7 @@ import { unique } from "#lib/id.ts";
 import { BookOpen, Plus } from "lucide-react";
 
 export function BookList() {
-  const { data, bookId, setBookId, setCompactDetail, commit } = useWorkspaceContext();
+  const { data, bookId, setBookId, setCompactDetail, compactDetail, panel, commit } = useWorkspaceContext();
   return (
     <Box
       title="Runbooks"
@@ -39,7 +40,7 @@ export function BookList() {
         {data.books.map((b) => (
           <button
             key={b.id}
-            aria-pressed={b.id === bookId}
+            aria-pressed={b.id === bookId && (panel !== "Runbooks" || compactDetail)}
             onClick={() => {
               setBookId(b.id);
               setCompactDetail(true);
@@ -59,7 +60,7 @@ export function BookEditor() {
   const { data, bookId, commit } = useWorkspaceContext(),
     book = data.books.find((b) => b.id === bookId);
   return (
-    <Box title="Runbook editor" icon={BookOpen}>
+    <Box title={book ? book.name : "Runbook editor"} icon={BookOpen} extra={<CloseDetail page="Runbooks" label="Close runbook" />}>
       {book ? (
         <form
           key={JSON.stringify(book)}

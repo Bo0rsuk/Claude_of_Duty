@@ -1,4 +1,4 @@
-# Podział zadań - Claude of Duty
+# Podział zadań - Squawk
 
 Plan pracy dla 3 osób na ok. 10 h kodowania + 2 h na prezentację.
 Stack: Java 21 (Lambda, bez Springa, AWS SDK v2, Maven), Terraform, TypeScript + React, DynamoDB, Kinesis, SQS, AppSync Events, Cognito, Bedrock.

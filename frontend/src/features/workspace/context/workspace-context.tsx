@@ -114,17 +114,17 @@ function useWorkspace() {
     setMemberId(store.profile?.userId ?? "");
   }, [store, ready]);
 
-  // A notification addressed to this user opens the alert it is about.
-  const popup = store?.popup;
-  useEffect(() => {
-    if (!store || !popup) return;
+  // A notification addressed to this user is shown over the page until the person reacts to it.
+  const incoming = store?.popup ?? null;
+  const dismissIncoming = () => store?.setPopup(null);
+  const openIncoming = () => {
+    if (!store || !incoming) return;
     setPanel("Alerts");
-    setAlertId(popup.alertId);
+    setAlertId(incoming.alertId);
     setCompactDetail(true);
-    store.openAlert(popup.alertId);
-    setNotice({ text: popup.title + " · " + popup.body });
+    store.openAlert(incoming.alertId);
     store.setPopup(null);
-  }, [store, popup]);
+  };
 
   /** The signed-in person, or null when running on demo data. */
   const account = store && {
@@ -185,6 +185,10 @@ function useWorkspace() {
     prototype,
     setPrototype,
     account,
+    /** An in-app notification waiting for the person's reaction, or null. */
+    incoming,
+    openIncoming,
+    dismissIncoming,
     /** The backend id of a source shown by name, or undefined on demo data. */
     sourceIdOf: (name: string) => store?.snapshot?.sources.find((source) => source.name === name)?.sourceId,
   };

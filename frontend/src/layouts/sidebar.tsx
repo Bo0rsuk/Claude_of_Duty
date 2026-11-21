@@ -3,6 +3,7 @@ import { type Panel, allowed, useWorkspaceContext } from "#features/workspace";
 import { SidebarNavigation } from "#layouts/sidebar-navigation.tsx";
 import {
   Bell,
+  BookOpen,
   ChevronsUpDown,
   Database,
   GitBranch,
@@ -17,7 +18,8 @@ const navIcons = {
   Custom: LayoutDashboard,
   Rules: GitBranch,
   Sources: Database,
-  "Groups & runbooks": Layers,
+  Groups: Layers,
+  Runbooks: BookOpen,
   Users,
   Admin: Shield,
 };
@@ -76,8 +78,9 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
             {navSection("Management", [
               "Rules",
               "Sources",
-              "Groups & runbooks",
+              "Runbooks",
               "Users",
+              "Groups",
             ])}
             {navSection("Administration", ["Admin"])}
           </>

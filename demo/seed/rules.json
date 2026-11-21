@@ -141,5 +141,55 @@
     "runbookId": null,
     "createdAt": "2026-11-20T21:00:00.000Z",
     "updatedAt": "2026-11-20T21:00:00.000Z"
+  },
+  {
+    "ruleId": "demo-critical-kubernetes",
+    "orgId": "demo",
+    "sourceId": "mock-kafka",
+    "name": "Kubernetes failures",
+    "enabled": true,
+    "match": {
+      "mode": "all",
+      "conditions": [
+        {
+          "field": "level",
+          "op": "in",
+          "value": [
+            "ERROR",
+            "FATAL"
+          ]
+        }
+      ]
+    },
+    "severity": "CRITICAL",
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-platform"
+        }
+      }
+    ],
+    "presentation": {
+      "title": "Kubernetes cluster is failing",
+      "body": "{{kind}} on {{labels.service}}: {{message}}",
+      "fields": [
+        "kind",
+        "labels.service",
+        "labels.pod",
+        "labels.namespace"
+      ]
+    },
+    "groupBy": [],
+    "throttle": {
+      "perRule": {
+        "max": 20,
+        "windowSeconds": 300
+      }
+    },
+    "runbookId": "rb-restart",
+    "createdAt": "2026-11-20T21:00:00.000Z",
+    "updatedAt": "2026-11-20T21:00:00.000Z"
   }
 ]

@@ -4,7 +4,8 @@ export type Panel =
   | "Custom"
   | "Rules"
   | "Sources"
-  | "Groups & runbooks"
+  | "Groups"
+  | "Runbooks"
   | "Users"
   | "Admin";
 export type Severity = "Critical" | "Warning" | "Info";
@@ -91,6 +92,8 @@ export interface Rule {
   recipientLimit?: string;
   /** Length of that window in minutes. */
   recipientInterval?: string;
+  /** Seconds to wait between channels when the rule escalates. Empty: every channel at once. */
+  escalation?: string;
 }
 export interface Member {
   id: string;

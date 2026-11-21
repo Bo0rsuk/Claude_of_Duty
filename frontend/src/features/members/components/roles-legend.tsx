@@ -1,16 +1,19 @@
 import { Box } from "#components/box.tsx";
+import { roleDescriptions } from "#features/members/domain/role-descriptions.ts";
+import { roles } from "#features/workspace";
 import { Shield } from "lucide-react";
+import { Fragment } from "react";
 
 export function RolesLegend() {
   return (
     <Box title="Role permissions" icon={Shield}>
       <dl className="plain-dl">
-        <dt>User</dt>
-        <dd>Respond to alerts and personalize views.</dd>
-        <dt>Team lead</dt>
-        <dd>Manage team members, routing rules, sources and runbooks.</dd>
-        <dt>Admin</dt>
-        <dd>Manage teams, accounts and join codes across the company.</dd>
+        {roles.map((role) => (
+          <Fragment key={role}>
+            <dt>{role}</dt>
+            <dd>{roleDescriptions[role]}</dd>
+          </Fragment>
+        ))}
       </dl>
     </Box>
   );

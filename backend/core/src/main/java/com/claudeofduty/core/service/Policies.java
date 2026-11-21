@@ -7,6 +7,7 @@ import com.claudeofduty.core.model.Runbook;
 import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.notify.ChannelDirectory;
 import com.claudeofduty.core.notify.DeliveryWindows;
+import com.claudeofduty.core.notify.Escalations;
 import com.claudeofduty.core.parser.ParserRegistry;
 import com.claudeofduty.core.port.Repository;
 import com.claudeofduty.core.rules.MatchValidator;
@@ -92,6 +93,7 @@ public final class Policies {
                 try {
                     MatchValidator.validate(rule.match(), operators);
                     DeliveryWindows.validate(rule.delivery(), ChannelDirectory.withDefaults());
+                    Escalations.validate(rule.escalation());
                 } catch (IllegalArgumentException e) {
                     throw ApiException.invalid(e.getMessage());
                 }

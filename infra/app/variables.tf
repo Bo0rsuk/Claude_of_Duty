@@ -105,6 +105,29 @@ variable "push_contact" {
   default     = "mailto:alerts@squawk.com.pl"
 }
 
+variable "voice_provider" {
+  description = "Who places the phone calls of the voice channel: \"twilio\", or empty to only log the call and mark it as simulated."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = contains(["", "twilio"], var.voice_provider)
+    error_message = "voice_provider must be \"twilio\" or empty."
+  }
+}
+
+variable "voice_recording_url" {
+  description = "Public address of a recorded message (mp3 or wav) that a phone call plays before reading the alert. Empty: the call only reads the alert. A file in frontend/public/ is published with the web application, e.g. https://<site>/voice/alert.mp3."
+  type        = string
+  default     = ""
+}
+
+variable "twilio_parameter_prefix" {
+  description = "Prefix of the SSM parameters holding the Twilio account: <prefix>-account-sid, <prefix>-auth-token (SecureString) and <prefix>-from-number (the Twilio number calls come from, e.g. +15005550006). Create them by hand so they stay out of the repository and the Terraform state."
+  type        = string
+  default     = "/cod/twilio"
+}
+
 variable "gemini_model" {
   description = "Google Gemini model used by the rule assistant. The smallest tier is enough: the task is turning one sentence into a few conditions."
   type        = string

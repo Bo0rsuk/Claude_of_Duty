@@ -67,10 +67,10 @@ export const registry: Record<string, Widget> = {
   sources: widget("Sources", "Source list", SourceList, "list"),
   source: widget("Sources", "Source details", SourceDetails),
   wizard: widget("Sources", "Add source wizard", WizardWidget),
-  groups: widget("Groups & runbooks", "Recipient groups", GroupList, "list"),
-  members: widget("Groups & runbooks", "Group members", GroupMembers),
-  books: widget("Groups & runbooks", "Runbooks", BookList, "list"),
-  book: widget("Groups & runbooks", "Runbook editor", BookEditor),
+  groups: widget("Groups", "Recipient groups", GroupList, "list"),
+  members: widget("Groups", "Group members", GroupMembers),
+  books: widget("Runbooks", "Runbooks", BookList, "list"),
+  book: widget("Runbooks", "Runbook editor", BookEditor),
   users: widget("Users", "Member list", UserList, "list"),
   user: widget("Users", "Member details", ManageUser),
   assign: widget("Users", "Assigned rules", AssignRules),
@@ -87,8 +87,10 @@ const defaults: Record<Panel, string[]> = {
   Custom: [],
   Rules: ["rules", "rule"],
   Sources: ["sources", "source"],
-  "Groups & runbooks": ["groups", "members", "books", "book"],
-  Users: ["users", "user", "legend", "assign"],
+  Groups: ["groups", "members"],
+  Runbooks: ["books", "book"],
+  // Role descriptions and assigned rules are part of the member details; their widgets stay available for custom views.
+  Users: ["users", "user"],
   Admin: ["teams", "team", "accounts", "code", "account"],
 };
 function originalLayout(panel: Panel) {

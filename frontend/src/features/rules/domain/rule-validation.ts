@@ -1,5 +1,5 @@
 import type { Rule } from "#features/workspace";
-import { deliveryWindowError } from "#services/backend/to-backend.ts";
+import { deliveryWindowError, escalationError } from "#services/backend/to-backend.ts";
 
 /**
  * Why a rule cannot be saved, or "" when it can. The demo needs a recipient and
@@ -16,6 +16,8 @@ export function ruleValidationError(rule: Rule, live = false) {
   }
   const window = deliveryWindowError(rule.window ?? "");
   if (window) return window;
+  const pause = escalationError(rule.escalation);
+  if (pause) return pause;
   const quiet = live && !rule.targets.length && !rule.channels.length;
   if (!rule.targets.length && !quiet) {
     return live

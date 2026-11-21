@@ -159,6 +159,11 @@ export type Rule = {
   throttle: { perRule?: Limit | null; perRecipient?: Limit | null } | null;
   /** When the routing applies. Absent or null means at any hour. */
   delivery?: Delivery | null;
+  /**
+   * Notify channel by channel: in-app and push, then email, SMS and a phone call, each stepSeconds
+   * after the one before. Unused channels are skipped; a step is dropped once the alert is not open.
+   */
+  escalation?: { stepSeconds: number } | null;
   runbookId: string | null;
   createdAt: string;
   updatedAt: string;

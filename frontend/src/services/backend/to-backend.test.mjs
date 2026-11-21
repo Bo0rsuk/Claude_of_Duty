@@ -102,3 +102,13 @@ test("the delivery window is sent as two times of day in the time zone it was wr
   });
   assert.throws(() => ruleBody({ ...rule, window: "nights", fallback: "Email" }, data, snapshot), Unsupported);
 });
+
+test("the pause between channels is sent in seconds, kept when a screen does not edit it, and checked", () => {
+  assert.equal(ruleBody(rule, data, snapshot).escalation, null);
+  assert.deepEqual(ruleBody({ ...rule, escalation: "30" }, data, snapshot).escalation, { stepSeconds: 30 });
+  assert.equal(ruleBody({ ...rule, escalation: " " }, data, snapshot).escalation, null);
+  const escalating = { ...snapshot, rules: [{ ...stored, escalation: { stepSeconds: 45 } }] };
+  assert.deepEqual(ruleBody(rule, data, escalating).escalation, { stepSeconds: 45 });
+  assert.throws(() => ruleBody({ ...rule, escalation: "2" }, data, snapshot), Unsupported);
+  assert.throws(() => ruleBody({ ...rule, escalation: "soon" }, data, snapshot), Unsupported);
+});

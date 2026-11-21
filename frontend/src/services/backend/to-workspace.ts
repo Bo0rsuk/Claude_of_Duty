@@ -147,6 +147,7 @@ export function toRule(snapshot: Snapshot, rule: Api.Rule, extras: Extras): Rule
     ),
     recipientLimit: each ? String(each.max) : "",
     recipientInterval: each ? String(Math.max(1, Math.round(each.windowSeconds / 60))) : "",
+    escalation: rule.escalation ? String(rule.escalation.stepSeconds) : "",
   };
 }
 
@@ -198,7 +199,13 @@ export function toEntry(entry: Api.TimelineEntry): Entry {
       ],
       NOTIFICATION_SUPPRESSED: [
         "Suppressed",
-        `${delivery} held back ${detail.reason === "deliveryWindow" ? "outside the rule's delivery window" : "by the rule's limit"}`,
+        `${delivery} ${
+          detail.reason === "alertHandled"
+            ? "not needed: the alert was acknowledged or resolved before this step of the escalation"
+            : detail.reason === "deliveryWindow"
+              ? "held back outside the rule's delivery window"
+              : "held back by the rule's limit"
+        }`,
       ],
       NOTIFICATIONS_RESENT: ["Sent", `${detail.notifications} notifications sent again by ${who}`],
       ACKNOWLEDGED: ["Acknowledged", "Acknowledged by " + who],

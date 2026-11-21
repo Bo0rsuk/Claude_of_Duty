@@ -30,7 +30,7 @@ public final class NotificationDispatcher implements AlertNotifier {
 
     @Override
     public void alertCreated(Alert alert, Rule rule, Source source) {
-        dispatch(alert, planner.plan(alert, rule, source));
+        dispatch(alert, planner.plan(alert, rule, source), rule.escalation());
     }
 
     /**
@@ -40,19 +40,23 @@ public final class NotificationDispatcher implements AlertNotifier {
      */
     public int resend(Alert alert, Rule rule, Source source) {
         NotificationPlanner.Plan plan = planner.plan(alert, rule, source, false);
-        dispatch(alert, plan);
+        // A person asked for it now, so nothing waits.
+        dispatch(alert, plan, null);
         return plan.jobs().size();
     }
 
-    private void dispatch(Alert alert, NotificationPlanner.Plan plan) {
+    private void dispatch(Alert alert, NotificationPlanner.Plan plan, Rule.Escalation escalation) {
 
         for (NotificationPlanner.Suppressed suppressed : plan.suppressed()) {
             record(alert, TimelineEntry.Type.NOTIFICATION_SUPPRESSED, Map.of(
                     "channel", suppressed.channel(), "recipient", suppressed.recipient(), "reason", suppressed.reason()));
         }
-        for (NotificationJob job : plan.jobs()) {
+        for (Map.Entry<NotificationJob, Integer> planned : Escalations.delays(plan.jobs(), escalation).entrySet()) {
+            int delay = planned.getValue();
+            // A step that waits is only worth sending while nobody has reacted to the alert.
+            NotificationJob job = delay > 0 ? planned.getKey().asEscalated() : planned.getKey();
             try {
-                queue.enqueue(job, 0);
+                queue.enqueue(job, delay);
             } catch (RuntimeException e) {
                 // The alert exists already. Failing here would reprocess the whole
                 // batch, so the lost notification is made visible in the timeline instead.

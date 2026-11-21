@@ -64,6 +64,25 @@ resource "aws_apigatewayv2_route" "preflight" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda["api"].id}"
 }
 
+# The phone provider fetches the script of a call from here when the recipient
+# answers. It cannot send a token, so these routes have no authorizer. The
+# answer holds only the text passed in the request.
+resource "aws_apigatewayv2_route" "voice_script" {
+  for_each = toset(["GET", "POST"])
+
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "${each.value} /voice/twiml"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda["api"].id}"
+}
+
+# The notifier reads the endpoint's address at run time. Passing it as an
+# environment variable would make the functions and the API depend on each other.
+resource "aws_ssm_parameter" "voice_script_url" {
+  name  = "${var.twilio_parameter_prefix}-twiml-url"
+  type  = "String"
+  value = "${aws_apigatewayv2_api.this.api_endpoint}/voice/twiml"
+}
+
 resource "aws_lambda_permission" "api_gateway" {
   for_each = toset(["ingest", "api"])
 

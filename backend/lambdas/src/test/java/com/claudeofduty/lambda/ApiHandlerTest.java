@@ -199,6 +199,24 @@ class ApiHandlerTest {
     }
 
     @Test
+    void phoneProviderGetsTheCallScriptWithoutSigningIn() {
+        APIGatewayV2HTTPEvent event = APIGatewayV2HTTPEvent.builder()
+                .withRawPath("/voice/twiml")
+                .withQueryStringParameters(Map.of("text", "payment-api is failing <now>"))
+                .withRequestContext(APIGatewayV2HTTPEvent.RequestContext.builder()
+                        .withHttp(APIGatewayV2HTTPEvent.RequestContext.Http.builder().withMethod("POST").build())
+                        .build())
+                .build();
+
+        APIGatewayV2HTTPResponse response = api.handleRequest(event, null);
+
+        assertEquals(200, response.getStatusCode());
+        assertTrue(response.getHeaders().get("content-type").startsWith("text/xml"));
+        assertTrue(response.getBody().contains("<Say language=\"en-US\">payment-api is failing &lt;now&gt;</Say>"),
+                response.getBody());
+    }
+
+    @Test
     void organizationAlwaysKeepsAnAdmin() {
         createOrganization("anna");
 
@@ -260,6 +278,12 @@ class ApiHandlerTest {
         assertInvalid("Unknown operator", call("anna", "POST", "/rules", rule.formatted(sourceId, "CRITICAL", "soundsLike", "x")));
         assertInvalid("regular expression", call("anna", "POST", "/rules", rule.formatted(sourceId, "CRITICAL", "regex", "(unclosed")));
         assertInvalid("existing source", call("anna", "POST", "/rules", rule.formatted("missing", "CRITICAL", "eq", "x")));
+        String escalating = rule.formatted(sourceId, "CRITICAL", "eq", "x").replaceFirst("\\}$", ", \"escalation\": {\"stepSeconds\": %d}}");
+        assertInvalid("escalation.stepSeconds", call("anna", "POST", "/rules", escalating.formatted(2)));
+        assertInvalid("escalation.stepSeconds", call("anna", "POST", "/rules", escalating.formatted(3600)));
+        Result saved = call("anna", "POST", "/rules", escalating.formatted(30));
+        assertEquals(201, saved.status);
+        assertEquals(30, saved.body.get("escalation").get("stepSeconds").asInt());
         assertInvalid("shape of a Rule", call("anna", "POST", "/rules", rule.formatted(sourceId, "URGENT", "eq", "x")));
         assertInvalid("connector.type", call("anna", "POST", "/sources", "{\"name\": \"X\", \"connector\": {\"type\": \"ftp\"}}"));
         assertInvalid("parser", call("anna", "POST", "/sources",

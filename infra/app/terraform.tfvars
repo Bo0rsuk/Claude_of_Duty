@@ -62,3 +62,16 @@ processor_batch_size = 100
 # two once the account's quota is increased.
 processor_parallelization_factor = 1
 notifier_max_concurrency         = 2
+
+# Phone calls of the voice channel. Empty: the call is only logged and shown
+# as simulated. "twilio": real calls. Before switching it on, create the
+# three parameters named in the twilio_parameter_prefix variable:
+#   aws ssm put-parameter --name /cod/twilio-account-sid --type SecureString --value <Account SID>
+#   aws ssm put-parameter --name /cod/twilio-auth-token  --type SecureString --value <Auth Token>
+#   aws ssm put-parameter --name /cod/twilio-from-number --type String       --value <Twilio number, +1...>
+voice_provider = "twilio"
+
+# A recorded message played at the start of every call, before the alert is
+# read. Put the file in frontend/public/voice/ and publish the frontend; it is
+# then at https://squawk.com.pl/voice/<file>. Empty: no recording.
+voice_recording_url = "/voice/alert.mp3"

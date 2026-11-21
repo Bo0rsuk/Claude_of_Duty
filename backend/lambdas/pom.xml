@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>lambdas</artifactId>
-  <name>Claude of Duty - lambdas</name>
+  <name>Squawk - lambdas</name>
 
   <dependencies>
     <dependency>

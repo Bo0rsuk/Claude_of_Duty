@@ -43,7 +43,7 @@ Początkową rolą jest **Admin**. Menu profilu na dole nawigacji pozwala zmieni
 | Rola | Dostęp |
 | --- | --- |
 | User | Alerts i Custom view |
-| Team lead | Dodatkowo Rules, Sources, Groups & runbooks oraz Users w obrębie Platform operations |
+| Team lead | Dodatkowo Rules, Sources, Groups, Runbooks oraz Users w obrębie Platform operations |
 | Admin | Dodatkowo Admin, wszystkie konta, zespoły i kody dołączenia |
 
 W **Prototype controls → Workspace state** dostępne są ładowanie, błąd z ponowieniem, pusty widok, częściowe dane i odmowa dostępu. **Team access → Without a team** otwiera formularz dołączenia. Początkowy kod zespołu Platform operations to `PLAT-4826`. Aktualny kod znajduje się w panelu Admin oraz w kontrolkach prototypu.

@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>core</artifactId>
-  <name>Claude of Duty - core</name>
+  <name>Squawk - core</name>
 
   <dependencies>
     <dependency>

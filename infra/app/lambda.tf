@@ -28,6 +28,9 @@ locals {
     VAPID_SUBJECT               = var.push_contact
     GEMINI_MODEL                = var.gemini_model
     GEMINI_API_KEY_PARAMETER    = var.gemini_api_key_parameter
+    VOICE_PROVIDER              = var.voice_provider
+    VOICE_RECORDING_URL         = var.voice_recording_url
+    TWILIO_PARAMETER_PREFIX     = var.twilio_parameter_prefix
     # Stops the JIT at the first tier, which makes cold starts noticeably shorter.
     # The processor stores alerts from 16 threads, so it keeps more idle
     # connections per host than the JDK's default of 5.
