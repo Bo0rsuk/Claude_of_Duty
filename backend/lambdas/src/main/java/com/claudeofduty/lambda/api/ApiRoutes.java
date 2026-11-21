@@ -40,7 +40,8 @@ public final class ApiRoutes {
         // Account and organization
         router.add("GET", "/me", null, request -> Response.ok(organizations.profile(request.caller())));
         router.add("PATCH", "/me", USER, request -> Response.ok(
-                organizations.updateProfile(request.caller(), request.text("name"), request.text("phone"))));
+                organizations.updateProfile(request.caller(), request.text("name"), request.text("phone"),
+                        request.text("email"))));
         router.add("POST", "/orgs/join", null, request -> Response.ok(
                 organizations.join(request.caller(), request.text("inviteCode"))));
         router.add("POST", "/orgs", null, request -> Response.created(
@@ -54,7 +55,7 @@ public final class ApiRoutes {
                 request.text("role") == null ? null : role(request.text("role")))));
         router.add("PATCH", "/members/{userId}", ADMIN, request -> Response.ok(
                 organizations.updateMember(request.caller(), request.path("userId"), role(request.text("role")),
-                        request.text("name"), request.text("phone"))));
+                        request.text("name"), request.text("phone"), request.text("email"))));
         // Push notifications: the devices of the signed-in user
         router.add("GET", "/push/public-key", null, request -> Response.ok(
                 Map.of("publicKey", services.push().publicKey())));

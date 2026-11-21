@@ -171,19 +171,34 @@ export async function applyChanges(changes: Change[], data: Data, snapshot: Snap
         await api("PATCH", `/members/${change.member.id}`, { role: roleOf(change.member.role) });
         break;
       case "member.profile":
-        if (change.member.id === snapshot.profile.userId) {
-          await api("PATCH", "/me", { name: change.member.name, phone: change.member.phone });
-        } else {
+        {
+          const own = change.member.id === snapshot.profile.userId;
           const name = change.member.name.trim();
           const phone = change.member.phone.trim();
-          const saved = await api<Api.Member>("PATCH", `/members/${change.member.id}`, {
-            role: roleOf(change.member.role),
-            name,
-            phone,
-          });
-          // An older server changes the role only and ignores the rest.
-          if ((saved.name ?? "") !== name || (saved.phone ?? "") !== phone) {
+          const email = change.member.email.trim().toLowerCase();
+          const before = snapshot.members.find((member) => member.userId === change.member.id);
+          const emailChanged = email !== (before?.email ?? "").toLowerCase();
+          const saved = own
+            ? await api<Api.Profile>("PATCH", "/me", { name, phone, ...(emailChanged && { email }) })
+            : await api<Api.Member>("PATCH", `/members/${change.member.id}`, {
+                role: roleOf(change.member.role),
+                name,
+                phone,
+                ...(emailChanged && { email }),
+              });
+          // An older server ignores the parts it does not know and answers with the record unchanged.
+          if (emailChanged && (saved.email ?? "").toLowerCase() !== email) {
+            throw new Unsupported("The email address cannot be changed until the backend is updated. Name and phone were saved.");
+          }
+          if (!own && ((saved.name ?? "") !== name || (saved.phone ?? "") !== phone)) {
             throw new Unsupported("This server lets each person set only their own name and phone.");
+          }
+          if (emailChanged) {
+            notes.push(
+              own
+                ? "Sign in with " + email + " from now on."
+                : "If this person has an account, they sign in with " + email + " from now on.",
+            );
           }
         }
         break;

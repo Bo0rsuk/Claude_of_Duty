@@ -31,14 +31,14 @@ The minimum role is given in the last column of each table.
 | Method and path | Purpose | Role |
 |---|---|---|
 | `GET /me` | Profile and membership: `{ userId, email, name, phone, org: { orgId, name, role }, tokenRefreshNeeded }`. `org` is null before joining. `tokenRefreshNeeded` is true when the caller's token does not carry their organization yet; the client must get a new token before subscribing to real-time channels. | any |
-| `PATCH /me` | Update `name` and `phone` | any |
+| `PATCH /me` | Update `name`, `phone` and `email`. The email is also the sign-in name, so it changes there too and the user signs in with the new address. `409` when the address is taken. | any |
 | `POST /orgs` | Create an organization `{ name }`. The caller becomes its `admin`. | any, no org yet |
 | `POST /orgs/join` | Join with `{ inviteCode }` as `user`. Whoever joins an organization that has no members yet becomes its `admin`. | any, no org yet |
 | `GET /org` | Organization details. `inviteCode` is included for `admin` only. | user |
 | `POST /org/invite-code` | Generate a new invite code | admin |
 | `GET /members` | List members | user |
 | `POST /members` | Add a person with `{ email, name?, role? }` (role defaults to `user`). Their account is created in this organization and they get a temporary password by email, which they replace on first sign-in. `409` when the email already has an account: share the invite code instead. | admin |
-| `PATCH /members/{userId}` | Change any of `{ role, name, phone }`. A part that is left out stays as it is; an empty `phone` removes the number. | admin |
+| `PATCH /members/{userId}` | Change any of `{ role, name, phone, email }`. A part that is left out stays as it is; an empty `phone` removes the number. A new `email` also becomes the member's sign-in name. | admin |
 | `DELETE /members/{userId}` | Remove a member | admin |
 
 ### Sources

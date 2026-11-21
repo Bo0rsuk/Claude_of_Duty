@@ -64,6 +64,12 @@ variable "events_per_second" {
   default     = 2
 }
 
+variable "incident_interval_seconds" {
+  description = "Seconds between failures (ERROR or FATAL events) on every mock source. With a value above 0 the regular traffic holds no failures, so alerts appear at this steady pace. 0 mixes failures into the traffic at random."
+  type        = number
+  default     = 0
+}
+
 variable "webhook_url" {
   description = "URL that receives the pushed webhook events. Empty disables the webhook source."
   type        = string

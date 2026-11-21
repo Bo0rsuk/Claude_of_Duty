@@ -58,13 +58,13 @@ public final class OrganizationService {
                 new OrganizationSummary(member.orgId(), orgName, member.role()), tokenOutOfDate);
     }
 
-    /** Name and phone are what notifications use to reach the user. */
-    public Profile updateProfile(Caller caller, String name, String phone) {
+    /** Name, phone and email are what notifications use to reach the user. The email is also the sign-in name. */
+    public Profile updateProfile(Caller caller, String name, String phone, String email) {
         caller.orgId();
         requirePhone(phone);
         Member current = caller.member();
         Member updated = new Member(current.orgId(), current.userId(), current.role(),
-                name != null ? name : current.name(), current.email(),
+                name != null ? name : current.name(), changedEmail(current, email),
                 phone == null ? current.phone() : phone.isBlank() ? null : phone.strip(), current.joinedAt());
         membership.saveMember(updated);
         return profile(new Caller(caller.userId(), caller.email(), updated, caller.tokenOrgId()));
@@ -120,9 +120,7 @@ public final class OrganizationService {
     public Member invite(Caller caller, String email, String name, Role role) {
         String orgId = caller.orgId();
         String address = email == null ? "" : email.strip().toLowerCase();
-        if (!address.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
-            throw ApiException.invalid("email must be an email address");
-        }
+        requireEmail(address);
         if (membership.members(orgId).stream().anyMatch(member -> address.equalsIgnoreCase(member.email()))) {
             throw ApiException.conflict(address + " is already a member");
         }
@@ -134,12 +132,12 @@ public final class OrganizationService {
     }
 
     /**
-     * An admin changes a member's role, name or phone. A part that is null stays as it is;
+     * An admin changes a member's role, name, phone or email. A part that is null stays as it is;
      * a blank phone removes the number.
      */
-    public Member updateMember(Caller caller, String userId, Role role, String name, String phone) {
-        if (role == null && name == null && phone == null) {
-            throw ApiException.invalid("Send a role (user, team_lead or admin), a name or a phone to change");
+    public Member updateMember(Caller caller, String userId, Role role, String name, String phone, String email) {
+        if (role == null && name == null && phone == null && email == null) {
+            throw ApiException.invalid("Send a role (user, team_lead or admin), a name, a phone or an email to change");
         }
         requirePhone(phone);
         Member member = requireMember(caller, userId);
@@ -147,10 +145,40 @@ public final class OrganizationService {
             requireAnotherAdmin(caller, userId);
         }
         Member updated = new Member(member.orgId(), member.userId(), role != null ? role : member.role(),
-                name == null ? member.name() : name.isBlank() ? null : name.strip(), member.email(),
+                name == null ? member.name() : name.isBlank() ? null : name.strip(), changedEmail(member, email),
                 phone == null ? member.phone() : phone.isBlank() ? null : phone.strip(), member.joinedAt());
         membership.saveMember(updated);
         return updated;
+    }
+
+    /**
+     * The member's email after a change request. The address is also what the person signs in with,
+     * so it is changed there first; if that is refused, nothing is saved.
+     *
+     * @param email the requested address, or null to keep the current one
+     */
+    private String changedEmail(Member member, String email) {
+        if (email == null) {
+            return member.email();
+        }
+        String address = email.strip().toLowerCase();
+        if (address.equalsIgnoreCase(member.email())) {
+            return member.email();
+        }
+        requireEmail(address);
+        boolean taken = membership.members(member.orgId()).stream()
+                .anyMatch(other -> !other.userId().equals(member.userId()) && address.equalsIgnoreCase(other.email()));
+        if (taken) {
+            throw ApiException.conflict(address + " is already a member");
+        }
+        users.changeEmail(member.userId(), address);
+        return address;
+    }
+
+    private static void requireEmail(String address) {
+        if (!address.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
+            throw ApiException.invalid("email must be an email address");
+        }
     }
 
     private static void requirePhone(String phone) {

@@ -76,9 +76,8 @@ function memberChanges(before: Member, after: Member): Change[] {
         : { kind: "member.role", member: after },
     );
   }
-  if (before.name !== after.name || before.phone !== after.phone) changes.push({ kind: "member.profile", member: after });
-  if (before.email !== after.email) {
-    changes.push({ kind: "unsupported", message: "The email address is the sign-in name and cannot be changed here." });
+  if (before.name !== after.name || before.phone !== after.phone || before.email !== after.email) {
+    changes.push({ kind: "member.profile", member: after });
   }
   return changes;
 }

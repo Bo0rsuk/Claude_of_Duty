@@ -91,4 +91,26 @@ public final class CognitoUserDirectory implements UserDirectory {
         }
         throw new IllegalStateException("The sign-in system returned no id for the new account");
     }
+
+    /** The new address is marked verified: without that Cognito keeps the old one until a code is entered. */
+    @Override
+    public void changeEmail(String userId, String email) {
+        SignedHttp.Response response = http.post(endpoint, "cognito-idp", HEADERS, Json.write(Map.of(
+                "UserPoolId", userPoolId,
+                "Username", userId,
+                "UserAttributes", List.of(
+                        Map.of("Name", "email", "Value", email),
+                        Map.of("Name", "email_verified", "Value", "true")))));
+        if (response.successful()) {
+            return;
+        }
+        String type = Json.tree(response.body()).path("__type").asText();
+        if (type.endsWith("UserNotFoundException")) {
+            return;
+        }
+        if (type.endsWith("AliasExistsException") || type.endsWith("UsernameExistsException")) {
+            throw ApiException.conflict(email + " already has an account");
+        }
+        throw new IllegalStateException("Could not change the email: HTTP " + response.status() + " " + response.body());
+    }
 }

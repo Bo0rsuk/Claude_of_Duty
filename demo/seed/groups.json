@@ -1,22 +1,5 @@
 [
   {
-    "groupId": "grp-incident",
-    "orgId": "demo",
-    "name": "Incident commanders",
-    "members": [
-      {
-        "type": "user",
-        "userId": "demo-john-smith"
-      },
-      {
-        "type": "user",
-        "userId": "demo-sophia-davis"
-      }
-    ],
-    "createdAt": "2026-11-20T21:40:00.000Z",
-    "updatedAt": "2026-11-20T21:40:00.000Z"
-  },
-  {
     "groupId": "grp-payments",
     "orgId": "demo",
     "name": "Payments on-call",
@@ -49,36 +32,6 @@
       {
         "type": "user",
         "userId": "demo-david-miller"
-      },
-      {
-        "type": "user",
-        "userId": "demo-olivia-wilson"
-      },
-      {
-        "type": "user",
-        "userId": "demo-james-taylor"
-      }
-    ],
-    "createdAt": "2026-11-20T21:40:00.000Z",
-    "updatedAt": "2026-11-20T21:40:00.000Z"
-  },
-  {
-    "groupId": "grp-database",
-    "orgId": "demo",
-    "name": "Database team",
-    "members": [
-      {
-        "type": "user",
-        "userId": "demo-daniel-moore"
-      },
-      {
-        "type": "user",
-        "userId": "demo-grace-hall"
-      },
-      {
-        "type": "contact",
-        "name": "Database vendor support",
-        "email": "support@example.com"
       }
     ],
     "createdAt": "2026-11-20T21:40:00.000Z",

@@ -20,6 +20,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("generator")
 
 EVENTS_PER_SECOND = float(os.environ.get("EVENTS_PER_SECOND", "2"))
+# Seconds between failures. 0 mixes failures into the traffic at random instead.
+INCIDENT_INTERVAL_SECONDS = float(os.environ.get("INCIDENT_INTERVAL_SECONDS", "0"))
 FEED_SIZE = int(os.environ.get("FEED_SIZE", "10000"))
 KAFKA_BOOTSTRAP = os.environ.get("KAFKA_BOOTSTRAP", "")
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "infra.events")
@@ -56,11 +58,22 @@ sources = [
 
 
 async def emit_forever() -> None:
+    """Background traffic. With scheduled incidents it holds no failures, so nothing alerts by chance."""
     interval = 1 / EVENTS_PER_SECOND
+    scenarios = formats.CALM_SCENARIOS if INCIDENT_INTERVAL_SECONDS > 0 else formats.SCENARIOS
     while True:
         for source in sources:
-            source.emit(formats.make_record(source.services))
+            source.emit(formats.make_record(source.services, formats.pick(scenarios)))
         await asyncio.sleep(interval)
+
+
+async def emit_incidents() -> None:
+    """One failure on every source each interval: a steady, predictable trickle for demos."""
+    while True:
+        await asyncio.sleep(INCIDENT_INTERVAL_SECONDS)
+        scenario = formats.pick(formats.INCIDENT_SCENARIOS)
+        for source in sources:
+            source.emit(formats.make_record(source.services, scenario))
 
 
 @asynccontextmanager
@@ -75,7 +88,10 @@ async def lifespan(_: FastAPI):
         sources.append(Source("webhook", ["monitoring"], formats.as_webhook, webhook, alerts_only=True))
         tasks.append(asyncio.create_task(webhook.run()))
     tasks.append(asyncio.create_task(emit_forever()))
-    log.info("Emitting %s events/s per source: %s", EVENTS_PER_SECOND, [s.name for s in sources])
+    if INCIDENT_INTERVAL_SECONDS > 0:
+        tasks.append(asyncio.create_task(emit_incidents()))
+    log.info("Emitting %s events/s per source, a failure every %s s: %s",
+             EVENTS_PER_SECOND, INCIDENT_INTERVAL_SECONDS or "random", [s.name for s in sources])
     yield
     for task in tasks:
         task.cancel()
@@ -100,6 +116,7 @@ def index() -> dict:
             "webhook": {"target": WEBHOOK_URL or None, "enabled": bool(WEBHOOK_URL)},
         },
         "events_per_second_per_source": EVENTS_PER_SECOND,
+        "seconds_between_failures": INCIDENT_INTERVAL_SECONDS or None,
     }
 
 

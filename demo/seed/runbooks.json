@@ -17,28 +17,6 @@
     "updatedAt": "2026-11-21T00:00:00.000Z"
   },
   {
-    "runbookId": "rb-escalation",
-    "orgId": "demo",
-    "title": "Critical incident: first response",
-    "format": "markdown",
-    "content": "## First five minutes\n\n1. **Acknowledge** the alert so the team sees someone is on it.\n2. Check whether other services report errors at the same time.\n3. If customers are affected, post in `#incidents`.\n\n## Escalate when\n\n- the cause is not clear after 15 minutes\n- more than one service is down\n\nOn-call lead: see the team calendar.",
-    "url": null,
-    "items": null,
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
-  },
-  {
-    "runbookId": "rb-wiki",
-    "orgId": "demo",
-    "title": "Edge proxy troubleshooting (wiki)",
-    "format": "link",
-    "content": null,
-    "url": "https://wiki.example.com/platform/edge-proxy-troubleshooting",
-    "items": null,
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
-  },
-  {
     "runbookId": "rb-restart",
     "orgId": "demo",
     "title": "Restarting a service",

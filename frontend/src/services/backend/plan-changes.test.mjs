@@ -59,7 +59,7 @@ test("member and organization changes map to what the backend offers", () => {
   assert.deepEqual(kinds(member({ name: "Anna Nowak", phone: "+48600100200" })), ["member.profile"]);
   assert.deepEqual(kinds(member({ team: "", role: "Pending" })), ["member.remove"]);
   assert.deepEqual(kinds(member({ role: "Pending" })), ["unsupported"]);
-  assert.deepEqual(kinds(member({ email: "other@example.pl" })), ["unsupported"]);
+  assert.deepEqual(kinds(member({ email: "other@example.pl" })), ["member.profile"]);
 
   const team = (changes) => ({ ...base, teams: [{ ...base.teams[0], ...changes }] });
   assert.deepEqual(kinds(team({ code: "CCCC-DDDD" })), ["team.code"]);

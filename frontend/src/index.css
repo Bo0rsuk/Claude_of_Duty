@@ -2258,9 +2258,13 @@ dialog::backdrop {
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   align-items: center;
   gap: clamp(32px, 6vw, 96px);
-  max-width: 1180px;
-  margin: 0 auto;
+  /* The white page spans the whole window; the side padding keeps the content within 1180px. */
+  margin: 0;
   padding: clamp(24px, 5vw, 64px);
+  padding-inline: max(clamp(24px, 5vw, 64px), (100vw - 1180px) / 2);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 .sign-in .join {
   width: min(420px, 100%);

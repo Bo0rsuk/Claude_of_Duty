@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
     environment:
       EVENTS_PER_SECOND: ${EVENTS_PER_SECOND:-2}
+      INCIDENT_INTERVAL_SECONDS: ${INCIDENT_INTERVAL_SECONDS:-0}
       KAFKA_BOOTSTRAP: redpanda:9092
       KAFKA_TOPIC: ${KAFKA_TOPIC:-infra.events}
       WEBHOOK_URL: ${WEBHOOK_URL:-}

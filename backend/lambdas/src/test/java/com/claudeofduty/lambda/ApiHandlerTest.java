@@ -54,6 +54,8 @@ class ApiHandlerTest {
     /** What the sign-in system has on record: user -> organization. A token carries it only after a refresh. */
     private final Map<String, String> organizationOnRecord = new HashMap<>();
     private final Map<String, String> organizationInToken = new HashMap<>();
+    /** Addresses changed in the sign-in system: user -> new email. */
+    private final Map<String, String> signInEmails = new HashMap<>();
 
     private final ApiHandler api = new ApiHandler(Services.create(new Services.Ports(
             sources, rules, groups, runbooks, members,
@@ -71,6 +73,14 @@ class ApiHandlerTest {
                     }
                     organizationOnRecord.put(userId, orgId);
                     return userId;
+                }
+
+                @Override
+                public void changeEmail(String userId, String email) {
+                    if (email.startsWith("taken@")) {
+                        throw ApiException.conflict(email + " already has an account");
+                    }
+                    signInEmails.put(userId, email);
                 }
             },
             alerts,
@@ -162,6 +172,30 @@ class ApiHandlerTest {
         assertEquals(409, call("anna", "POST", "/members", "{\"email\": \"bob@example.pl\"}").status);
         assertEquals(400, call("anna", "POST", "/members", "{\"email\": \"not an address\"}").status);
         assertEquals(403, call("carl", "POST", "/members", "{\"email\": \"dan@example.pl\"}").status);
+    }
+
+    @Test
+    void emailChangesInTheProfileAndInTheSignInSystemTogether() {
+        String inviteCode = createOrganization("anna");
+        call("bob", "POST", "/orgs/join", "{\"inviteCode\": \"" + inviteCode + "\"}");
+
+        Result own = call("anna", "PATCH", "/me", "{\"email\": \" Anna.New@Example.pl \"}");
+        assertEquals(200, own.status);
+        assertEquals("anna.new@example.pl", own.body.get("email").asText());
+        assertEquals("anna.new@example.pl", signInEmails.get("anna"));
+
+        Result other = call("anna", "PATCH", "/members/bob", "{\"email\": \"robert@example.pl\"}");
+        assertEquals("robert@example.pl", other.body.get("email").asText());
+        assertEquals("robert@example.pl", signInEmails.get("bob"));
+
+        // Refused changes leave both places as they were.
+        assertEquals(409, call("anna", "PATCH", "/members/bob", "{\"email\": \"anna.new@example.pl\"}").status);
+        assertEquals(409, call("anna", "PATCH", "/members/bob", "{\"email\": \"taken@example.pl\"}").status);
+        assertEquals(400, call("anna", "PATCH", "/me", "{\"email\": \"not an address\"}").status);
+        assertEquals(403, call("bob", "PATCH", "/members/anna", "{\"email\": \"x@example.pl\"}").status);
+        assertEquals("robert@example.pl", call("anna", "GET", "/members", null).body.get("items").findValuesAsText("email")
+                .stream().filter(email -> email.startsWith("robert")).findFirst().orElse(null));
+        assertEquals("robert@example.pl", signInEmails.get("bob"));
     }
 
     @Test

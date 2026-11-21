@@ -17,8 +17,12 @@ frontend_origin = "d3v62e73kgsdj9.cloudfront.net"
 # there. Set this only if the domain moves to a Route 53 hosted zone.
 # route53_zone_id = "Z0123456789ABCDEFGHIJ"
 
-instance_type     = "t3.small"
-events_per_second = 2
+instance_type = "t3.small"
+
+# Ordinary traffic (INFO and WARN) per source, and one failure on every source
+# every 30 seconds. Failures are what the CRITICAL rules alert on.
+events_per_second         = 0.5
+incident_interval_seconds = 30
 
 # Ingest endpoint of the application that receives the pushed webhooks.
 # Empty disables the webhook source.
