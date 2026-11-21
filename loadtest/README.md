@@ -147,8 +147,72 @@ Fixes made after this run, not measured yet:
 
 Known limits:
 
-- **About 10 concurrent Lambda executions** for the whole account until the quota is raised.
-- **A few hundred new alerts per second per organization**, set by the single partition of the alerts table. Identical events are not affected: thousands per second collapse into one alert.
+- **About 10 concurrent Lambda executions** for the whole account until the quota is raised. Ingest no longer uses them, the processor and notifier still do.
+- **A few hundred new alerts per second per organization**, set by the processor's concurrency and by the single partition of the alerts table. Identical events are not affected: thousands per second collapse into one alert.
 - **Counts can be too high after a retried batch.** Processing is at-least-once: when a batch fails halfway, the retry counts its events again.
 
 Raw files: `results/optimized/`, `results/optimized-batched/`.
+
+### Final (2026-11-21)
+
+Changes since the previous run:
+
+- **Direct ingest:** API Gateway writes webhook payloads straight to Kinesis, with no Lambda. Ingest no longer competes for the account's 10 concurrent executions. The sender's token is checked by the processor.
+- **Atomic alert write:** creating an alert and adding events to it is one conditional-free update, which removed a race between two processor instances (see below).
+- **Smaller alerts:** an event keeps only its own part of the request as raw text.
+- **DynamoDB retries:** up to 8 attempts, so a brief throttle is waited out.
+- **SnapStart priming:** each function makes its first service calls during initialization, so they are in the snapshot.
+
+**Direct ingest, one event per request** (`--ingest-route direct`), scenario `unique`:
+
+| Target rate | Accepted | Rejected | Lost | End to end p50 | p99 | Ingest to alert p50 | p99 | Notification p50 | p99 |
+|---|---|---|---|---|---|---|---|---|---|
+| 50/s | 50/s | 0 of 1500 | 0 | 179.1 ms | 292.4 ms | 71 ms | 133 ms | 160 ms | 268 ms |
+| 100/s | 99.9/s | 0 of 3000 | 0 | 177.2 ms | 302.3 ms | 72 ms | 131 ms | 207 ms | 604 ms |
+| 200/s | 199.7/s | 0 of 6000 | 0 | 192.7 ms | 338.4 ms | 74 ms | 167 ms | 2102 ms | 9782 ms |
+| 400/s | 398.7/s | 0 of 12000 | 0 | 1181.6 ms | 2267.6 ms | 989 ms | 2063 ms | - ms | - ms |
+
+**Direct ingest, burst** of identical events at 1000 events/s (5 per request):
+
+| Target rate | Events accepted | Alerts created | Final count | First event to alert | Count complete after last event |
+|---|---|---|---|---|---|
+| 1000/s | 25000 | 1 | 25000 | 346.9 ms | 141.6 ms |
+
+**Ingest through the Lambda** (`--ingest-route lambda`), for comparison. Scenario `unique`, one event per request:
+
+| Target rate | Accepted | Rejected | Lost | End to end p50 | p99 | Ingest to alert p50 | p99 | Notification p50 | p99 |
+|---|---|---|---|---|---|---|---|---|---|
+| 25/s | 24.9/s | 0 of 750 | 0 | 186.1 ms | 290 ms | 71 ms | 131 ms | 140 ms | 247 ms |
+| 50/s | 49.7/s | 7 of 1500 | 0 | 186.6 ms | 429.5 ms | 75 ms | 313 ms | 300 ms | 3205 ms |
+
+Several events per request (5, 10 and 20):
+
+| Target rate | Accepted | Rejected | Lost | End to end p50 | p99 | Ingest to alert p50 | p99 | Notification p50 | p99 |
+|---|---|---|---|---|---|---|---|---|---|
+| 100/s | 100/s | 0 of 3000 | 0 | 201.6 ms | 390.5 ms | 73 ms | 179 ms | 423 ms | 6663 ms |
+| 200/s | 200/s | 0 of 6000 | 0 | 262 ms | 628.8 ms | 93 ms | 430 ms | 1368 ms | 4820 ms |
+| 400/s | 400/s | 0 of 12000 | 0 | 1117.2 ms | 3840.6 ms | 926 ms | 3651 ms | 16455 ms | 26111 ms |
+
+
+Burst at 200 events/s, three runs:
+
+| Target rate | Events accepted | Alerts created | Final count | First event to alert | Count complete after last event |
+|---|---|---|---|---|---|
+| 200/s | 4810 | 1 | 4810 | 1744.4 ms | 145.4 ms |
+| 200/s | 5000 | 1 | 5000 | 286.1 ms | 211.8 ms |
+| 200/s | 5000 | 1 | 5000 | 260.8 ms | 161.4 ms |
+
+
+In the first burst run 190 events were refused with `503` right after a deployment; all 4810 accepted ones were counted.
+
+**Cold start:** the first event after about 15 minutes of idle took 1.2 s end to end (9.2 s before priming); the following ones were back to normal. Raw files: `results/final-cold/`.
+
+Findings:
+
+- **With direct ingest, 200 single-event requests per second are delivered with no rejection and no loss**, end to end in 193 ms at p50 and 338 ms at p99. Through the Lambda the same account rejected requests from 50 per second.
+- **400 distinct alerts per second is where the processor saturates** on 4 concurrent invocations: everything is delivered, but latency grows to 1.2 s at p50 and the backlog clears 2 s after the last send.
+- **Deduplication holds at 1000 events per second:** 25,000 identical events became one alert with a count of exactly 25,000, complete 142 ms after the last event.
+- **A measurement found a bug.** A burst once produced two alerts and a count of 4990 instead of 5000. Two processor instances raced: one had claimed the alert but not stored it yet, the other stored it, and the first then overwrote it. Storing became a single atomic update. Three burst runs afterwards, and 40 concurrent writers against the real table, gave exact counts.
+- **Notification latency rises under load** (p50 2.1 s at 200/s) because the notifier is capped at 2 concurrent invocations per queue. That cap exists only because of the account limit.
+
+Raw files: `results/final/`, `results/final-batched/`, `results/direct/`.

@@ -330,7 +330,9 @@ async def run(args) -> dict:
             token = cognito_id_token(region, outputs["user_pool_client_id"], args.username, args.password)
         feed = LiveFeed(outputs["events_realtime_endpoint"], http_host, token)
         await feed.connect()
-        url = api_url + INGEST_PATH
+        # "direct": API Gateway writes to the stream itself. "lambda": through the ingest function.
+        ingest_base = outputs["ingest_base_url"] if args.ingest_route == "direct" else api_url
+        url = ingest_base + INGEST_PATH
 
         if args.warmup > 0:
             print(f"Warm-up: {args.rate} events/s for {args.warmup} s (not measured)")
@@ -362,7 +364,7 @@ async def run(args) -> dict:
             "run_id": run_id,
             "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "scenario": args.scenario,
-            "settings": {"target_rate_events_per_s": args.rate, "duration_s": args.duration,
+            "settings": {"ingest_route": args.ingest_route, "target_rate_events_per_s": args.rate, "duration_s": args.duration,
                          "events_per_request": args.batch, "warmup_s": args.warmup},
             "ingest": {
                 "events_sent": len(measured_ids),
@@ -443,6 +445,8 @@ def main() -> None:
     parser.add_argument("--duration", type=float, default=30, help="seconds of measured traffic")
     parser.add_argument("--warmup", type=float, default=10, help="seconds of unmeasured traffic before the measurement")
     parser.add_argument("--batch", type=int, default=1, help="events per HTTP request")
+    parser.add_argument("--ingest-route", choices=["direct", "lambda"], default="direct",
+                        help="direct: API Gateway writes to the stream; lambda: through the ingest function")
     parser.add_argument("--connections", type=int, default=200, help="maximum concurrent HTTP connections")
     parser.add_argument("--drain-timeout", type=float, default=60, help="seconds to wait for the live feed after sending")
     parser.add_argument("--notification-sample", type=int, default=100,

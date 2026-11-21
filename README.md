@@ -15,7 +15,7 @@ load test. Next: the rule preview and AI assistant, and the web application. See
 
 ```
 mock sources: JSON API, application log, access log, Kafka, webhook
-  -> connector worker (pull) / API Gateway + ingest Lambda (push)
+  -> connector worker (pull) / API Gateway writing straight to the stream (push)
   -> Kinesis Data Streams
   -> processor Lambda: parse -> normalize -> rules -> deduplicate -> throttle
   -> DynamoDB (alerts, timeline) + AppSync Events -> browser (live feed)
@@ -102,7 +102,8 @@ Then send an event and look at the resulting alert:
 
 ```bash
 API=$(terraform -chdir=infra/app output -raw api_url)
-curl -X POST "$API/ingest/demo/mock-webhook?token=demo-token" \
+INGEST=$(terraform -chdir=infra/app output -raw ingest_base_url)
+curl -X POST "$INGEST/ingest/demo/mock-webhook?token=demo-token" \
   -H 'content-type: application/json' \
   -d '{"status":"firing","alerts":[{"labels":{"alertname":"DB_TIMEOUT","severity":"error","service":"payments","instance":"pay-1"},"annotations":{"summary":"Database connection timeout"},"startsAt":"2026-11-20T21:00:00Z"}]}'
 aws dynamodb scan --table-name cod-alerts

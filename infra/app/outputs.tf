@@ -3,8 +3,18 @@ output "api_url" {
   value       = aws_apigatewayv2_api.this.api_endpoint
 }
 
+output "ingest_base_url" {
+  description = "Base URL of the direct ingest route, where API Gateway writes to the stream without a Lambda."
+  value       = aws_api_gateway_stage.ingest.invoke_url
+}
+
 output "ingest_url" {
   description = "Webhook URL pattern. Fill in the organization, the source and its ingest token."
+  value       = "${aws_api_gateway_stage.ingest.invoke_url}/ingest/{orgId}/{sourceId}?token={ingestToken}"
+}
+
+output "ingest_url_via_lambda" {
+  description = "The alternative ingest route through the ingest function. It refuses a wrong token at once with 404, but shares the account's Lambda concurrency."
   value       = "${aws_apigatewayv2_api.this.api_endpoint}/ingest/{orgId}/{sourceId}?token={ingestToken}"
 }
 
@@ -38,6 +48,7 @@ output "frontend_env" {
   value       = <<-EOT
     VITE_AWS_REGION=${var.region}
     VITE_API_URL=${aws_apigatewayv2_api.this.api_endpoint}
+    VITE_INGEST_URL=${aws_api_gateway_stage.ingest.invoke_url}
     VITE_USER_POOL_ID=${aws_cognito_user_pool.this.id}
     VITE_USER_POOL_CLIENT_ID=${aws_cognito_user_pool_client.web.id}
     VITE_EVENTS_HTTP_ENDPOINT=${local.events_http_endpoint}

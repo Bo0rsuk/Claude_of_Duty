@@ -20,6 +20,7 @@ terraform -chdir=infra/app output -raw frontend_env > frontend/.env
 |---|---|
 | `VITE_AWS_REGION` | Region of the stack |
 | `VITE_API_URL` | Base URL of the REST API, no trailing slash |
+| `VITE_INGEST_URL` | Base URL that webhook senders post to. Only shown to users, the app does not call it. |
 | `VITE_USER_POOL_ID`, `VITE_USER_POOL_CLIENT_ID` | Cognito user pool and its web client |
 | `VITE_EVENTS_HTTP_ENDPOINT`, `VITE_EVENTS_REALTIME_ENDPOINT` | AppSync Events endpoints for the live feed |
 
@@ -205,7 +206,7 @@ or `checklist` (tickable `items`).
 | Delete | `DELETE /sources/{sourceId}` also deletes its rules |
 
 For a webhook source, show the URL the sender must call:
-`${VITE_API_URL}/ingest/${orgId}/${sourceId}?token=${ingestToken}`.
+`${VITE_INGEST_URL}/ingest/${orgId}/${sourceId}?token=${ingestToken}`.
 
 ### Rule editor
 
