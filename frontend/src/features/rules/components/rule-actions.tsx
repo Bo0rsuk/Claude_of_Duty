@@ -5,11 +5,11 @@ import { Save } from "lucide-react";
 import { useState } from "react";
 
 export function RuleActions() {
-  const { rule, data, commit, setRule } = useWorkspaceContext(),
+  const { rule, data, commit, setRule, account } = useWorkspaceContext(),
     [remove, setRemove] = useState(false),
     [error, setError] = useState("");
   function save() {
-    const message = ruleValidationError(rule);
+    const message = ruleValidationError(rule, Boolean(account));
     setError(message);
     if (message) return;
     commit(
@@ -38,8 +38,7 @@ export function RuleActions() {
       {remove && (
         <Modal title="Delete rule?" onClose={() => setRemove(false)}>
           <p>
-            Future demo events will no longer match “{rule.name}”. Existing
-            alerts keep their history.
+            New events will no longer match “{rule.name}”. Existing alerts keep their history.
           </p>
           <div className="buttons">
             <button onClick={() => setRemove(false)}>Cancel</button>
@@ -48,7 +47,7 @@ export function RuleActions() {
               onClick={() => {
                 const next = data.rules.filter((r) => r.id !== rule.id);
                 commit({ ...data, rules: next }, "Rule deleted locally.");
-                setRule(next[0] || newRule());
+                setRule(next[0] || newRule(account ? data : undefined));
                 setRemove(false);
               }}
             >

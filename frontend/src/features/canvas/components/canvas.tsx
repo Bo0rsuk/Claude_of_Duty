@@ -41,6 +41,7 @@ export function Canvas({
     compactDetail,
     setCompactDetail,
     rule,
+    account,
   } = useWorkspaceContext();
   const [saved, setSaved] = useLocal<StoredTile[]>(
     "fans:layout:" + role + ":" + panel,
@@ -49,10 +50,15 @@ export function Canvas({
   const catalog = Object.keys(registry).filter(
     (k) =>
       allowed(registry[k].panel, role) &&
+      !(account && registry[k].demoOnly) &&
       (panel === "Custom" || registry[k].panel === panel),
   );
   const clean = (arr: StoredTile[]) => {
-    const layout = arrange(arr.filter((t) => catalog.includes(t.kind)));
+    const kept = arr.filter((t) => catalog.includes(t.kind));
+    // When a stored tile is no longer offered, the rest is laid out again so that no hole is left where it was.
+    const layout = arrange(
+      kept.length === arr.length ? kept : kept.map(({ id, kind, wide, group }) => ({ id, kind, wide, group })),
+    );
     // Upgrade the former half-width default while preserving individually arranged boards.
     return panel === "Alerts" &&
       JSON.stringify(layout) === JSON.stringify(originalAlerts)
@@ -139,7 +145,7 @@ export function Canvas({
               {mode === "Permission denied"
                 ? "Your demo role has limited access."
                 : mode === "Error"
-                  ? "A simulated connection error interrupted this view."
+                  ? "The workspace could not be loaded. Check your connection and try again."
                   : "Add sample records to explore this view."}
             </Empty>
           )}
@@ -175,7 +181,7 @@ export function Canvas({
       ...new Set(
         tiles
           .map((t) => controllingLists[t.kind])
-          .filter((k) => k && !lists.has(k)),
+          .filter((k) => k && !lists.has(k) && !(account && registry[k]?.demoOnly)),
       ),
     ];
     return (

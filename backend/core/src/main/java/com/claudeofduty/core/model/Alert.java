@@ -1,6 +1,7 @@
 package com.claudeofduty.core.model;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /** A group of matching events presented to people as one incident. */
@@ -26,7 +27,9 @@ public record Alert(
         Instant acknowledgedAt,
         String resolvedBy,
         Instant resolvedAt,
-        Timing timing) {
+        Timing timing,
+        /** Positions of the runbook checklist steps that were ticked off for this alert, counted from 0. */
+        List<Integer> checkedSteps) {
 
     /** OPEN and ACKNOWLEDGED alerts absorb further matching events; RESOLVED is final. */
     public enum Status {
@@ -41,6 +44,6 @@ public record Alert(
     public Alert withoutSampleEvent() {
         return new Alert(alertId, orgId, ruleId, ruleName, sourceId, fingerprint, severity, status, title, body,
                 fields, count, firstSeenAt, lastSeenAt, null, runbookId, assigneeId, acknowledgedBy, acknowledgedAt,
-                resolvedBy, resolvedAt, timing);
+                resolvedBy, resolvedAt, timing, checkedSteps);
     }
 }

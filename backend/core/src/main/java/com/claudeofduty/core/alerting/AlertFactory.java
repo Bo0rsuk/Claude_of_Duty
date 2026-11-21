@@ -47,7 +47,7 @@ final class AlertFactory {
                 rule.severity(), Alert.Status.OPEN, title, body, shownFields(presentation, first),
                 count, first.eventTime(), lastSeenAt, first, rule.runbookId(),
                 null, null, null, null, null,
-                new Alert.Timing(first.receivedAt(), now));
+                new Alert.Timing(first.receivedAt(), now), null);
     }
 
     private static Map<String, Object> shownFields(Presentation presentation, NormalizedEvent event) {

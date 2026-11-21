@@ -2,6 +2,7 @@ import { Badge } from "#components/badge.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
+import { OlderAlerts } from "#features/alerts/components/older-alerts.tsx";
 import { StatusTag } from "#components/status-tag.tsx";
 import { buildAlertFeed } from "#features/alerts/domain/alert-feed.ts";
 import { addAction } from "#features/alerts/utils/add-action.ts";
@@ -12,8 +13,13 @@ import {
   statuses,
   useWorkspaceContext,
 } from "#features/workspace";
+import { ago } from "#lib/time.ts";
+import { useNow } from "#lib/use-now.ts";
 import { Filter, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+/** Who is working on the alert. Demo records keep that in target. */
+const ownerOf = (alert: { owner?: string; target: string }) => alert.owner ?? alert.target;
 
 const feedTime = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
@@ -32,6 +38,7 @@ export function AlertList() {
     setSeverity,
     status,
     setStatus,
+    account,
   } = useWorkspaceContext();
   const [query, setQuery] = useState(""),
     [filters, setFilters] = useState(false),
@@ -40,8 +47,10 @@ export function AlertList() {
     [checked, setChecked] = useState<string[]>([]),
     [pending, setPending] = useState(0);
   const list = useRef<HTMLDivElement>(null);
+  const now = useNow(5000);
   useEffect(() => {
-    if (paused || mode !== "Normal") return;
+    // Real alerts arrive by themselves; only the demo has to make some up.
+    if (account || paused || mode !== "Normal") return;
     const t = setInterval(() => setPending((n) => Math.min(n + 1, 5)), 60000);
     return () => clearInterval(t);
   }, [paused, mode]);
@@ -117,8 +126,8 @@ export function AlertList() {
         <div className="feed-heading">
           <h2>Alert feed</h2>
           <span className="feed-count">
-            {rows.length} {rows.length === 1 ? "alert" : "alerts"} ·{" "}
-            {groupCount} {groupCount === 1 ? "group" : "groups"}
+            {rows.length} {rows.length === 1 ? "alert" : "alerts"}
+            {groupCount > 0 && " · " + groupCount + (groupCount === 1 ? " group" : " groups")}
           </span>
         </div>
         <div className="feed-controls">
@@ -213,11 +222,11 @@ export function AlertList() {
                 <th scope="col">Severity</th>
                 <th scope="col">Alert</th>
                 <th scope="col">Status</th>
-                <th scope="col">Assigned to</th>
+                <th scope="col">Owner</th>
                 <th scope="col" className="number-cell">
                   Events
                 </th>
-                <th scope="col">Channels</th>
+                <th scope="col">Notified</th>
                 <th scope="col" className="number-cell">
                   Last seen
                 </th>
@@ -234,6 +243,10 @@ export function AlertList() {
                     key={key}
                     data-severity={a.severity}
                     className={someChecked ? "checked" : undefined}
+                    // The whole row opens the alert; its own controls keep their meaning.
+                    onClick={(e) => {
+                      if (!(e.target as HTMLElement).closest("input, button")) selectAlert(a.id);
+                    }}
                   >
                     <td>
                       <input
@@ -266,6 +279,10 @@ export function AlertList() {
                       >
                         {a.title}
                       </button>
+                      {/* On a narrow screen the columns are dropped and their content moves here. */}
+                      <span className="alert-narrow">
+                        {a.status} · {ownerOf(a) || "nobody yet"} · {members.reduce((sum, member) => sum + member.count, 0).toLocaleString("en-US")} events
+                      </span>
                       <span className="alert-source">
                         {a.source}
                         {members.length > 1 && (
@@ -291,7 +308,7 @@ export function AlertList() {
                     <td>
                       <StatusTag value={a.status} />
                     </td>
-                    <td>{a.target}</td>
+                    <td>{ownerOf(a) || <span className="nobody">Nobody yet</span>}</td>
                     <td className="number-cell">
                       {members
                         .reduce((sum, member) => sum + member.count, 0)
@@ -299,6 +316,7 @@ export function AlertList() {
                     </td>
                     <td>
                       <div className="feed-channels">
+                        {a.notified?.length ? <em>{a.notified.join(", ")}</em> : null}
                         {a.channels.map((channel) => (
                           <span key={channel}>{channel}</span>
                         ))}
@@ -309,7 +327,7 @@ export function AlertList() {
                         dateTime={new Date(a.last).toISOString()}
                         title={new Date(a.last).toLocaleString()}
                       >
-                        {feedTime.format(a.last)}
+                        {ago(a.last, now)}
                       </time>
                     </td>
                   </tr>
@@ -320,7 +338,9 @@ export function AlertList() {
         )}
         {!data.alerts.length && (
           <Empty title="No alerts yet">
-            New demo alerts will appear here when the live feed is running.
+            {account
+              ? "An alert appears here as soon as an event matches one of your rules."
+              : "New demo alerts will appear here when the live feed is running."}
           </Empty>
         )}
         {data.alerts.length > 0 && !rows.length && (
@@ -342,9 +362,16 @@ export function AlertList() {
           </Empty>
         )}
       </div>
+      <OlderAlerts />
       <footer className="feed-foot">
-        <span className={"tiny-dot " + (paused ? "paused" : "")} />
-        {paused ? "Live paused" : "Listening for demo events"}
+        <span className={"tiny-dot " + ((account ? !account.connected : paused) ? "paused" : "")} />
+        {account
+          ? account.connected
+            ? "Live · new alerts appear as they happen"
+            : "Reconnecting to the live feed…"
+          : paused
+            ? "Live paused"
+            : "Listening for demo events"}
       </footer>
       {inspectedGroup && (
         <Modal title="Grouped alerts" onClose={() => setOpenGroup("")}>

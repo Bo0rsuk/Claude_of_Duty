@@ -37,7 +37,8 @@ The minimum role is given in the last column of each table.
 | `GET /org` | Organization details. `inviteCode` is included for `admin` only. | user |
 | `POST /org/invite-code` | Generate a new invite code | admin |
 | `GET /members` | List members | user |
-| `PATCH /members/{userId}` | Change `{ role }` | admin |
+| `POST /members` | Add a person with `{ email, name?, role? }` (role defaults to `user`). Their account is created in this organization and they get a temporary password by email, which they replace on first sign-in. `409` when the email already has an account: share the invite code instead. | admin |
+| `PATCH /members/{userId}` | Change any of `{ role, name, phone }`. A part that is left out stays as it is; an empty `phone` removes the number. | admin |
 | `DELETE /members/{userId}` | Remove a member | admin |
 
 ### Sources
@@ -76,7 +77,9 @@ The minimum role is given in the last column of each table.
 | `POST /alerts/{alertId}/resolve` | Resolve | user |
 | `POST /alerts/{alertId}/assign` | Pass to `{ userId }` | user |
 | `POST /alerts/{alertId}/notes` | Add a comment `{ text }` | user |
-| `POST /alerts/{alertId}/resend` | Notify everyone in the rule's current routing again. Throttling does not apply. Answers `409` when the rule was deleted. | team_lead |
+| `POST /alerts/{alertId}/resend` | Notify everyone in the rule's current routing again. Throttling and the rule's delivery window do not apply. Answers `409` when the rule was deleted. | team_lead |
+| `PUT /alerts/{alertId}/runbook-steps` | Set which steps of the runbook checklist are done: `{ "checked": [0, 2] }` replaces the alert's `checkedSteps` | user |
+| `DELETE /alerts/{alertId}` | Delete the alert and its timeline. Answers `204` and publishes `alert.deleted`. | team_lead |
 
 The action endpoints return the updated alert and publish `alert.updated`.
 
@@ -135,8 +138,8 @@ Alert message:
 }
 ```
 
-`type` is `alert.created` or `alert.updated`. An update carries the whole alert
-again, so the client replaces its copy. An open alert window reloads its
+`type` is `alert.created`, `alert.updated` or `alert.deleted`. An update carries the whole alert
+again, so the client replaces its copy. After `alert.deleted` the client drops its copy. An open alert window reloads its
 timeline when an update for its alert arrives.
 
 Notification message:

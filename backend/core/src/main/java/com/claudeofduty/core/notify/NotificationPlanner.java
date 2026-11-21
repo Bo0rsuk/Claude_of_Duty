@@ -77,7 +77,7 @@ public final class NotificationPlanner {
         return plan(alert, rule, source, true);
     }
 
-    /** @param throttled false to ignore the rule's limits, for a resend that a person asked for */
+    /** @param throttled false to ignore the rule's limits and delivery window, for a resend that a person asked for */
     public Plan plan(Alert alert, Rule rule, Source source, boolean throttled) {
         List<NotificationJob> jobs = new ArrayList<>();
         List<Suppressed> suppressed = new ArrayList<>();
@@ -85,7 +85,24 @@ public final class NotificationPlanner {
         Map<String, Object> variables =
                 AlertVariables.of(alert.alertId(), rule, source, alert.sampleEvent(), alert.count(), appUrl);
 
-        recipients(rule).forEach((key, entry) -> {
+        List<Route> routing = rule.routing() == null ? List.of() : rule.routing();
+        if (throttled && DeliveryWindows.outside(rule.delivery(), now)) {
+            String fallback = rule.delivery().outsideWindow();
+            if (fallback == null) {
+                recipients(rule.orgId(), routing).values().forEach(entry ->
+                        suppressed.add(new Suppressed(entry.channel(), entry.recipient().address(), "deliveryWindow")));
+                return new Plan(jobs, suppressed);
+            }
+            // The same people, each on the fallback channel only. A bare phone number or email
+            // address stays only when the fallback channel delivers to that kind of address.
+            routing = routing.stream()
+                    .filter(route -> route.target() == null || !"address".equals(route.target().type())
+                            || channels.addressType(route.channel()).equals(channels.addressType(fallback)))
+                    .map(route -> new Route(fallback, route.target()))
+                    .toList();
+        }
+
+        recipients(rule.orgId(), routing).forEach((key, entry) -> {
             String channel = entry.channel();
             Recipient recipient = entry.recipient();
             String refusedBy = throttled ? refusedBy(rule, channel, recipient.address(), now) : null;
@@ -105,9 +122,8 @@ public final class NotificationPlanner {
     }
 
     /** One entry per channel and address, so someone reached through two groups is notified once. */
-    private Map<String, Addressed> recipients(Rule rule) {
+    private Map<String, Addressed> recipients(String orgId, List<Route> routing) {
         Map<String, Addressed> recipients = new LinkedHashMap<>();
-        List<Route> routing = rule.routing() == null ? List.of() : rule.routing();
         Map<String, Member> members = null;
         for (Route route : routing) {
             AddressType type = channels.addressType(route.channel()).orElse(null);
@@ -115,10 +131,10 @@ public final class NotificationPlanner {
                 continue;
             }
             if (members == null && !"address".equals(route.target().type())) {
-                members = membership.members(rule.orgId()).stream()
+                members = membership.members(orgId).stream()
                         .collect(Collectors.toMap(Member::userId, Function.identity()));
             }
-            for (Contact contact : contacts(rule.orgId(), route.target(), type, members)) {
+            for (Contact contact : contacts(orgId, route.target(), type, members)) {
                 String address = contact.address(type);
                 if (address != null && !address.isBlank()) {
                     recipients.putIfAbsent(route.channel() + "|" + address,

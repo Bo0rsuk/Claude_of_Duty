@@ -1,3 +1,5 @@
+import { Logo } from "#components/logo.tsx";
+import { useCriticalSignal } from "#features/alerts/services/critical-signal.ts";
 import { Modal } from "#components/modal.tsx";
 import { Canvas } from "#features/canvas";
 import { StartupSplash } from "#features/startup";
@@ -60,13 +62,14 @@ export function App() {
     setMemberId,
     setCompactDetail,
     rule,
+    account: person,
   } = useWorkspaceContext();
   const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const [collapsed, setCollapsed] = useLocal("fans:collapsed", () => false),
     [drawer, setDrawer] = useState(false),
     [editing, setEditing] = useState(false),
     [account, setAccount] = useState(false),
-    [access, setAccess] = useState("Assigned"),
+    [demoAccess, setAccess] = useState("Assigned"),
     [leave, setLeave] = useState<null | (() => void)>(null);
 
   function finishIntro() {
@@ -79,8 +82,11 @@ export function App() {
   }
 
   const main = useRef<HTMLElement>(null);
-  const user =
-    access === "Assigned"
+  // Signed-in people are in a team or about to join one; the demo switches between made-up states.
+  const access = person ? (person.hasTeam ? "Assigned" : "Unassigned") : demoAccess;
+  const user = person
+    ? person.name
+    : access === "Assigned"
       ? role === "Admin"
         ? "Alex Morgan"
         : role === "Team lead"
@@ -122,9 +128,7 @@ export function App() {
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, [role]);
-  useEffect(() => {
-    document.title = titles[panel] + " · Squawk";
-  }, [panel]);
+  useCriticalSignal(data.alerts, titles[panel] + " · Squawk");
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), 8000);
@@ -158,6 +162,10 @@ export function App() {
     />
   );
   function changeAccess(v: string) {
+    if (person) {
+      if (v === "Signed out") person.signOut();
+      return;
+    }
     setAccess(v);
     setEditing(false);
     setPrototype(false);
@@ -216,7 +224,7 @@ export function App() {
                 </button>
                 <span className="crumb-workspace">Workspace</span>
                 <span className="compact-wordmark">
-                  <img className="brand-mark" src="/squawk.png" alt="Squawk" width={198} height={141} />
+                  <Logo />
                   <span aria-hidden="true">Squawk</span>
                 </span>
                 <ChevronRight />

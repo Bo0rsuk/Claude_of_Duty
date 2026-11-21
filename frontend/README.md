@@ -13,6 +13,21 @@ npm run dev
 
 Otwórz adres podany przez Vite. Polecenia weryfikacyjne to `npm test`, `npm run typecheck`, `npm run lint` i `npm run build`. Gotowe pliki statyczne trafiają do `dist`. Polecenie `npm run preview` pozwala obejrzeć tę wersję.
 
+## Tryb demo i tryb live
+
+Bez pliku `.env` aplikacja działa na danych lokalnych, jak opisano niżej. Z plikiem `.env` łączy się z wdrożonym backendem: logowanie przez Cognito, dane z REST API, feed i powiadomienia w aplikacji przez WebSocket, zapis zmian na serwerze, asystent reguł na prawdziwym modelu, push na urządzenie.
+
+```sh
+terraform -chdir=../infra/app output -raw frontend_env > .env
+npm run dev
+```
+
+Publikacja na S3 i CloudFront: `../scripts/deploy-frontend.sh`. Kod zaproszenia organizacji demo jest w `Docs/frontend-integration/README.md`.
+
+Kod połączenia z backendem jest w `src/services/backend/`: `gateway.ts` (odczyt i zapis), `to-workspace.ts` i `to-backend.ts` (tłumaczenie między kształtem API a danymi interfejsu), `plan-changes.ts` (różnica dwóch stanów jako lista wywołań API), `conditions.ts` (tekst warunków na strukturę reguły i z powrotem). Stan trybu live trzyma `src/features/workspace/services/live-workspace.ts`.
+
+W trybie live nie ma przełącznika ról ani **Prototype controls**: rola pochodzi z serwera. Rzeczy, których backend nie ma, są wyłączone lub zostają lokalne: usunięcie alertu zamyka go (historia zostaje), okna dostępności odbiorców i kanał zapasowy nie są wysyłane, odbiorcą może być osoba lub grupa.
+
 ## Pierwsza demonstracja
 
 1. W **Alerts** otwórz **Order settlement failed**. W szczegółach są odbiorca dyżurny, kanały Phone i SMS oraz 500 zdarzeń zgrupowanych w jeden alert.
