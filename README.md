@@ -1,4 +1,4 @@
-# Claude of Duty
+# Squawk
 
 Alerting platform in the spirit of PagerDuty: it ingests events from many
 sources and formats, turns them into alerts with rules that can be changed at
@@ -162,7 +162,7 @@ STREAM_NAME=cod-events TABLE_PREFIX=cod- AWS_REGION=eu-central-1 java -jar backe
 
 A rule's `routing` lists who is notified over which channel when the rule
 creates an alert. Channels: `sms` (Amazon SNS), `email` (Amazon SES), `ui`
-(pop-up in the web application) and `voice` (simulated for now).
+(pop-up in the web application) and `voice` (a phone call through Twilio when `voice_provider = "twilio"` is set in `infra/app/terraform.tfvars`; otherwise the call is only logged and shown as simulated).
 
 - **Email** needs a sender: set `notification_sender_email` in
   `infra/app/terraform.tfvars`, apply, and click the confirmation link SES
