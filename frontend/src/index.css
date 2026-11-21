@@ -2014,7 +2014,8 @@ dialog::backdrop {
     padding-right: 0;
   }
 }
-@container (max-width: 1250px) {
+/* The default alert workspace at every width: the feed alone until an alert is opened, then the alert's details. */
+@container (min-width: 0) {
   .alerts-canvas:not(.editing) .split-mobile {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
@@ -2552,8 +2553,11 @@ dialog::backdrop {
     display: block;
   }
 }
-/* Between a phone and a very wide screen an opened alert sits beside the feed instead of replacing it. */
-@container (min-width: 900px) and (max-width: 1250px) {
+/* With enough room an opened alert sits beside the feed instead of replacing it, and is closed with its own button. */
+@container (min-width: 900px) {
+  .alerts-canvas:not(.editing) .back-list {
+    display: none;
+  }
   .alerts-canvas:not(.editing) .split-mobile.show-detail {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
     align-items: start;
@@ -2564,5 +2568,18 @@ dialog::backdrop {
   }
   .alerts-canvas:not(.editing) .split-mobile.show-detail > .list {
     display: block;
+  }
+}
+
+.inspector-top .inspector-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* On a narrow screen the details replace the feed and "Back to list" above them is the way back. */
+@container (max-width: 899px) {
+  .alerts-canvas:not(.editing) .inspector-tools .icon-btn {
+    display: none;
   }
 }

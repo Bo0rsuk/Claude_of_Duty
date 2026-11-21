@@ -6,10 +6,10 @@ import { Instructions } from "#features/alerts/components/instructions.tsx";
 import { Overview } from "#features/alerts/components/overview.tsx";
 import { Timeline } from "#features/alerts/components/timeline.tsx";
 import { type Severity, useWorkspaceContext } from "#features/workspace";
-import { ArrowLeft, BookOpen, ChevronRight, History, Layers, SquareStack } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, History, Layers, SquareStack, X } from "lucide-react";
 
 export function Inspector() {
-  const { alert: a, alertTab, setAlertTab, setCompactDetail } = useWorkspaceContext();
+  const { alert: a, alertTab, setAlertTab, compactDetail, setCompactDetail, panel } = useWorkspaceContext();
   if (!a)
     return (
       <section className="surface">
@@ -25,7 +25,20 @@ export function Inspector() {
           <SquareStack />
           Alert details
         </h2>
-        <span className="id-label">{a.id}</span>
+        <span className="inspector-tools">
+          <span className="id-label">{a.id}</span>
+          {/* In the alert workspace the details open over part of the feed; closing them gives the feed its full width back. */}
+          {compactDetail && panel === "Alerts" && (
+            <button
+              className="icon-btn"
+              aria-label="Close alert details"
+              title="Close alert details"
+              onClick={() => setCompactDetail(false)}
+            >
+              <X />
+            </button>
+          )}
+        </span>
       </header>
       <div className="inspection-heading">
         <div className="detail-tags">
