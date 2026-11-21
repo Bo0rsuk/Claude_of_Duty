@@ -2586,9 +2586,9 @@ dialog::backdrop {
   }
 }
 
-/* Rules: the list fills the page until a rule is opened, then list and editor share it as two columns. */
+/* Rules, groups, runbooks and members: the list fills the page until a record is opened, then list and details share it as two columns. */
 /* Each panel is as tall as the window allows and scrolls inside, so list and editor stay in view together. */
-.rules-canvas:not(.editing) .split-mobile > .tile {
+.fill-canvas:not(.editing) .split-mobile > .tile {
   height: var(--page-fill);
 }
 /* Sources: list and details reach the bottom of the window as well. */
@@ -2600,7 +2600,7 @@ dialog::backdrop {
   grid-row: auto;
 }
 @container (min-width: 760px) {
-  .rules-canvas:not(.editing) .split-mobile.show-detail {
+  .fill-canvas:not(.editing) .split-mobile.show-detail {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
@@ -2610,11 +2610,58 @@ dialog::backdrop {
 }
 /* On a phone the page itself scrolls, so panels take the height of their content instead of the window's. */
 @container canvas (max-width: 759px) {
-  .rules-canvas:not(.editing) .split-mobile > .tile {
+  .fill-canvas:not(.editing) .split-mobile > .tile {
     height: auto;
     min-height: var(--page-fill);
   }
   .sources-canvas:not(.editing) .canvas-grid {
     grid-auto-rows: auto;
   }
+}
+
+.role-field .field {
+  margin-bottom: var(--space-1-5);
+}
+.role-field .hint {
+  margin-bottom: var(--space-4);
+}
+.member-rules {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.member-rules legend {
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.person .icon-btn {
+  margin-left: auto;
+}
+
+.incoming-alert h3 {
+  margin: var(--space-3) 0 var(--space-1-5);
+  font: var(--weight-medium) var(--text-2xl) / 1.15 var(--display);
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+}
+.incoming-alert p {
+  margin: 0;
+  color: var(--graphite);
+}
+.incoming-alert .buttons {
+  margin-top: var(--space-5);
+}
+
+.escalation-hint {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+}
+
+.feed-scope {
+  flex-shrink: 0;
+}
+.feed-scope button {
+  font-size: var(--text-xs);
+  white-space: nowrap;
 }

@@ -97,7 +97,7 @@ The history shown in the alert window, oldest first.
 | `CREATED` | The alert is created | `ruleName`, `severity` |
 | `NOTIFICATION_SENT` | A provider accepted the notification | `channel`, `recipient`, `attempt`, `deliveredAt`, `latencyMs`, provider details such as `messageId` |
 | `NOTIFICATION_FAILED` | A delivery attempt failed | `channel`, `recipient`, `attempt`, `error`, `final` (true when no retries remain or retrying cannot help, e.g. a push to a user with no registered device) |
-| `NOTIFICATION_SUPPRESSED` | Throttling or the rule's delivery window held a notification back | `channel`, `recipient`, `reason` (`perRule`, `perRecipient` or `deliveryWindow`) |
+| `NOTIFICATION_SUPPRESSED` | Throttling or the rule's delivery window held a notification back, or an escalation step was no longer needed | `channel`, `recipient`, `reason` (`perRule`, `perRecipient`, `deliveryWindow` or `alertHandled`) |
 | `NOTIFICATIONS_RESENT` | A user asked to notify everyone again | `notifications` (how many were queued) |
 | `ACKNOWLEDGED` | A user acknowledged the alert | none |
 | `ASSIGNED` | The alert was passed to a user | `assigneeId`, `assigneeName` |

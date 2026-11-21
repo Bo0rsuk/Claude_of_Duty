@@ -6,8 +6,9 @@ export const panelNames: Panel[] = [
   "Custom",
   "Rules",
   "Sources",
-  "Groups & runbooks",
+  "Runbooks",
   "Users",
+  "Groups",
   "Admin",
 ];
 export function allowed(panel: Panel, role: Role) {

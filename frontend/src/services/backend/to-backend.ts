@@ -83,6 +83,25 @@ function delivery(rule: Rule, existing: Api.Rule | undefined): Api.Delivery | nu
   };
 }
 
+export const ESCALATION_SECONDS = { min: 5, max: 300 };
+
+/** Why the pause between channels cannot be used, or "" when it can. Empty means all channels at once. */
+export function escalationError(text: string | undefined): string {
+  if (!text?.trim()) return "";
+  const seconds = Number(text);
+  return Number.isInteger(seconds) && seconds >= ESCALATION_SECONDS.min && seconds <= ESCALATION_SECONDS.max
+    ? ""
+    : `Wait between ${ESCALATION_SECONDS.min} and ${ESCALATION_SECONDS.max} seconds between channels, or leave it empty.`;
+}
+
+function escalation(rule: Rule, existing: Api.Rule | undefined): Api.Rule["escalation"] {
+  // A screen that does not edit the pause leaves the stored one alone.
+  if (rule.escalation === undefined) return existing?.escalation ?? null;
+  const problem = escalationError(rule.escalation);
+  if (problem) throw new Unsupported(problem);
+  return rule.escalation.trim() ? { stepSeconds: Number(rule.escalation) } : null;
+}
+
 export function ruleBody(rule: Rule, data: Data, snapshot: Snapshot): Api.RuleInput {
   const existing = snapshot.rules.find((candidate) => candidate.ruleId === rule.id);
   const source = snapshot.sources.find((candidate) => candidate.name === rule.source);
@@ -127,6 +146,7 @@ export function ruleBody(rule: Rule, data: Data, snapshot: Snapshot): Api.RuleIn
           : recipientLimit(rule),
     },
     delivery: delivery(rule, existing),
+    escalation: escalation(rule, existing),
     runbookId: rule.runbook || null,
   };
 }

@@ -157,6 +157,20 @@ Optional. Without it the routing applies at any hour.
 - With `outsideWindow` null, nothing is sent outside the window. Each notification held back is recorded in the timeline as `NOTIFICATION_SUPPRESSED` with the reason `deliveryWindow`.
 - The alert itself is always created and shown in the live feed, and a resend that a person asks for goes out on the rule's own channels at any hour.
 
+## escalation
+
+Optional. Without it every notification of a new alert goes out at once.
+
+```json
+"escalation": { "stepSeconds": 30 }
+```
+
+- Channels are tried from the least to the most intrusive: `ui` and `push` together, then `email`, then `sms`, then `voice`. Each level waits `stepSeconds` after the one before.
+- Levels the rule does not route to are skipped without waiting: a rule with `ui` and `voice` calls one step after the pop-up.
+- A step that waited is dropped when the alert is no longer open by then (acknowledged, resolved or deleted). It is recorded in the timeline as `NOTIFICATION_SUPPRESSED` with the reason `alertHandled`.
+- `stepSeconds` is between 5 and 300. A step never waits longer than 900 seconds in total.
+- A resend that a person asks for ignores the escalation and notifies on all channels at once.
+
 ## runbookId
 
 Optional reference to a runbook from the library. The alert window shows the

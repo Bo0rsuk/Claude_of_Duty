@@ -1,3 +1,4 @@
+import { IncomingAlert } from "#features/alerts/components/incoming-alert.tsx";
 import { Logo } from "#components/logo.tsx";
 import { useCriticalSignal } from "#features/alerts/services/critical-signal.ts";
 import { Modal } from "#components/modal.tsx";
@@ -41,7 +42,8 @@ const titles: Record<Panel, string> = {
   Custom: "Custom view",
   Rules: "Routing rules",
   Sources: "Event sources",
-  "Groups & runbooks": "Groups & runbooks",
+  Groups: "Recipient groups",
+  Runbooks: "Runbooks",
   Users: "Team members",
   Admin: "Administration",
 };
@@ -63,6 +65,8 @@ export function App() {
     setCompactDetail,
     rule,
     account: person,
+    incoming,
+    scopedAlerts,
   } = useWorkspaceContext();
   const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const [collapsed, setCollapsed] = useLocal("fans:collapsed", () => false),
@@ -128,7 +132,7 @@ export function App() {
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, [role]);
-  useCriticalSignal(data.alerts, titles[panel] + " · Squawk");
+  useCriticalSignal(scopedAlerts, titles[panel] + " · Squawk");
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), 8000);
@@ -261,6 +265,8 @@ export function App() {
               closeAccount={() => setAccount(false)}
             />
           )}
+          {/* Keyed by alert, so a newer notification replaces the one on screen. */}
+          <IncomingAlert key={incoming?.alertId} />
           {leave && (
             <Modal title="Leave this view?" onClose={() => setLeave(null)}>
               <p>You have unsaved edits. Save the current view to keep them.</p>

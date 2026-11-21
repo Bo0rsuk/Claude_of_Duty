@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>aws</artifactId>
-  <name>Claude of Duty - AWS adapters</name>
+  <name>Squawk - AWS adapters</name>
 
   <dependencies>
     <dependency>

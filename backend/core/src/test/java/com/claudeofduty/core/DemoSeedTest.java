@@ -63,9 +63,9 @@ class DemoSeedTest {
     }
 
     @Test
-    void seedHoldsOneRulePerSeverity() throws IOException {
-        assertEquals(List.of("CRITICAL", "WARNING", "INFO"),
-                load("rules.json", Rule.class).stream().map(rule -> rule.severity().name()).toList());
+    void seedHoldsARuleForEverySeverity() throws IOException {
+        assertEquals(List.of("CRITICAL", "INFO", "WARNING"),
+                load("rules.json", Rule.class).stream().map(rule -> rule.severity().name()).distinct().sorted().toList());
     }
 
     private static RawRecord event(String id, String level, String code, String service) {

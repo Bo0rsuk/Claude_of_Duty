@@ -3,6 +3,7 @@ import { type Panel, allowed, useWorkspaceContext } from "#features/workspace";
 import { SidebarNavigation } from "#layouts/sidebar-navigation.tsx";
 import {
   Bell,
+  BookOpen,
   ChevronsUpDown,
   Database,
   GitBranch,
@@ -17,7 +18,8 @@ const navIcons = {
   Custom: LayoutDashboard,
   Rules: GitBranch,
   Sources: Database,
-  "Groups & runbooks": Layers,
+  Groups: Layers,
+  Runbooks: BookOpen,
   Users,
   Admin: Shield,
 };
@@ -29,7 +31,7 @@ interface SidebarProps {
   onOpenAccount: () => void;
 }
 export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProps) {
-  const { panel, role, data } = useWorkspaceContext();
+  const { panel, role, scopedAlerts } = useWorkspaceContext();
   function navSection(label: string, items: Panel[]) {
     const list = items.filter((p) => allowed(p, role));
     if (!list.length) return null;
@@ -54,7 +56,7 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
               <span>{p === "Custom" ? "Custom view" : p}</span>
               {p === "Alerts" && (
                 <small>
-                  {data.alerts.filter((a) => a.status !== "Resolved").length}
+                  {scopedAlerts.filter((a) => a.status !== "Resolved").length}
                 </small>
               )}
             </a>
@@ -76,8 +78,9 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
             {navSection("Management", [
               "Rules",
               "Sources",
-              "Groups & runbooks",
+              "Runbooks",
               "Users",
+              "Groups",
             ])}
             {navSection("Administration", ["Admin"])}
           </>

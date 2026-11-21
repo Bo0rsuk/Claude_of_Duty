@@ -65,6 +65,12 @@ locals {
         Resource = ["arn:aws:ssm:${var.region}:*:parameter${var.push_key_parameter_prefix}/vapid-*"]
       },
       {
+        # The phone provider's account, read when a call is placed.
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter"]
+        Resource = ["arn:aws:ssm:${var.region}:*:parameter${var.twilio_parameter_prefix}-*"]
+      },
+      {
         # SMS goes to phone numbers, which have no ARN to scope to.
         Effect   = "Allow"
         Action   = ["sns:Publish", "ses:SendEmail"]

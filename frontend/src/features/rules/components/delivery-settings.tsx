@@ -1,3 +1,4 @@
+import { ESCALATION_SECONDS } from "#services/backend/to-backend.ts";
 import { Choices } from "#components/choices.tsx";
 import { Field } from "#components/field.tsx";
 import {
@@ -127,6 +128,21 @@ export function Targets() {
           onChange={(channels) => editRule({ channels })}
         />
       </fieldset>
+      <Field label="Escalate channel by channel · seconds between them">
+        <input
+          type="number"
+          min={ESCALATION_SECONDS.min}
+          max={ESCALATION_SECONDS.max}
+          placeholder="All channels at once"
+          value={rule.escalation ?? ""}
+          onChange={(e) => editRule({ escalation: e.target.value })}
+        />
+      </Field>
+      <p className="hint escalation-hint">
+        {rule.escalation?.trim()
+          ? "In-app and push go first, then email, SMS and the phone call, each after this pause. Channels the rule does not use are skipped. The rest is dropped as soon as someone acknowledges or resolves the alert."
+          : "Leave empty to notify on every channel at the same moment."}
+      </p>
       <details>
         <summary>Delivery window & fallback</summary>
         <Field label="Local time window">

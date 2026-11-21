@@ -1,3 +1,4 @@
+import { alertsOf } from "#features/alerts/domain/my-alerts.ts";
 import { markAlertViewed } from "#features/workspace/domain/viewed-alert.ts";
 import { homeTeam } from "#features/workspace/domain/workspace-defaults.ts";
 import { fixtures } from "#features/workspace/services/demo-workspace.ts";
@@ -22,6 +23,7 @@ function useWorkspace() {
   const [panel, setPanel] = useState<Panel>("Alerts");
   const [alertId, setAlertId] = useState(data.alerts[0]?.id || "");
   const [sourceId, setSourceId] = useState(data.sources[0]?.id || "");
+  const [alertScope, setAlertScope] = useLocal<"mine" | "all">("fans:alert-scope", () => "mine");
   const [rule, setRule] = useState<Rule>(() => data.rules[0] || newRule());
   const [bookId, setBookId] = useState(data.books[0]?.id || "");
   const [groupId, setGroupId] = useState(data.groups[0]?.id || "");
@@ -114,17 +116,17 @@ function useWorkspace() {
     setMemberId(store.profile?.userId ?? "");
   }, [store, ready]);
 
-  // A notification addressed to this user opens the alert it is about.
-  const popup = store?.popup;
-  useEffect(() => {
-    if (!store || !popup) return;
+  // A notification addressed to this user is shown over the page until the person reacts to it.
+  const incoming = store?.popup ?? null;
+  const dismissIncoming = () => store?.setPopup(null);
+  const openIncoming = () => {
+    if (!store || !incoming) return;
     setPanel("Alerts");
-    setAlertId(popup.alertId);
+    setAlertId(incoming.alertId);
     setCompactDetail(true);
-    store.openAlert(popup.alertId);
-    setNotice({ text: popup.title + " · " + popup.body });
+    store.openAlert(incoming.alertId);
     store.setPopup(null);
-  }, [store, popup]);
+  };
 
   /** The signed-in person, or null when running on demo data. */
   const account = store && {
@@ -139,6 +141,9 @@ function useWorkspace() {
     hasOlderAlerts: store.hasOlderAlerts,
     loadOlderAlerts: store.loadOlder,
   };
+  // On the alert page a signed-in person sees their own alerts unless they ask for everyone's.
+  const mine = store?.profile?.userId ? alertsOf(store.profile.userId, data) : data.alerts;
+  const scopedAlerts = store && alertScope === "mine" ? mine : data.alerts;
   const editRule = (changes: Partial<Rule>) =>
     setRule((r) => ({ ...r, ...changes }));
   return {
@@ -185,6 +190,15 @@ function useWorkspace() {
     prototype,
     setPrototype,
     account,
+    /** "mine": only the alerts that concern the signed-in person; "all": the whole team's. */
+    alertScope,
+    setAlertScope,
+    /** The alerts the alert page shows and counts under the current scope. */
+    scopedAlerts,
+    /** An in-app notification waiting for the person's reaction, or null. */
+    incoming,
+    openIncoming,
+    dismissIncoming,
     /** The backend id of a source shown by name, or undefined on demo data. */
     sourceIdOf: (name: string) => store?.snapshot?.sources.find((source) => source.name === name)?.sourceId,
   };

@@ -1,5 +1,6 @@
 package com.claudeofduty.core.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.List;
@@ -22,7 +23,30 @@ public record Rule(
         Instant createdAt,
         Instant updatedAt,
         String updatedBy,
-        Delivery delivery) {
+        Delivery delivery,
+        Escalation escalation) {
+
+    /** Jackson builds rules through this, the full form. */
+    @JsonCreator
+    public Rule {
+    }
+
+    /** A rule that notifies on all its channels at once. */
+    public Rule(String ruleId, String orgId, String sourceId, String name, boolean enabled, Match match,
+            Severity severity, List<Route> routing, Presentation presentation, List<String> groupBy,
+            Throttle throttle, String runbookId, Instant createdAt, Instant updatedAt, String updatedBy,
+            Delivery delivery) {
+        this(ruleId, orgId, sourceId, name, enabled, match, severity, routing, presentation, groupBy, throttle,
+                runbookId, createdAt, updatedAt, updatedBy, delivery, null);
+    }
+
+    /**
+     * Notifies channel by channel instead of all at once: in-app and push first, then email,
+     * then SMS, then a phone call, each {@code stepSeconds} after the one before. Channels the
+     * rule does not use are skipped. A step is dropped when the alert is no longer open by then.
+     */
+    public record Escalation(int stepSeconds) {
+    }
 
     public record Match(MatchMode mode, List<Condition> conditions) {
     }

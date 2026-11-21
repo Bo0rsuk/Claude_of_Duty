@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Load test for Claude of Duty: measured throughput and end-to-end latency.
+"""Load test for Squawk: measured throughput and end-to-end latency.
 
 Sends webhook events at a fixed rate and, at the same time, listens on the
 live feed's WebSocket channel like a browser does. Every event carries a unique

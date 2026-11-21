@@ -14,6 +14,7 @@ import com.claudeofduty.core.model.Runbook;
 import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.port.Membership;
 import com.claudeofduty.lambda.ai.GeminiTextModel;
+import com.claudeofduty.lambda.channels.TwilioVoiceChannel;
 import com.claudeofduty.lambda.api.ApiRoutes;
 import com.claudeofduty.lambda.api.Request;
 import com.claudeofduty.lambda.api.Response;
@@ -68,8 +69,14 @@ public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIGate
         this.membership = services.membership();
     }
 
+    /** Path of the call script endpoint. Its API Gateway routes have no authorizer. */
+    private static final String VOICE_SCRIPT_PATH = "/voice/twiml";
+
     @Override
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
+        if (VOICE_SCRIPT_PATH.equals(event.getRawPath())) {
+            return voiceScript(event);
+        }
         try {
             Response response = handle(event);
             return response.body() == null
@@ -82,6 +89,24 @@ public class ApiHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIGate
             e.printStackTrace();
             return HttpResponses.error(500, "INTERNAL", "Unexpected error");
         }
+    }
+
+    /**
+     * What a phone call says, as TwiML. The phone provider fetches it when the recipient answers,
+     * so it carries no token: the route has no authorizer, and the answer only echoes the text it was given.
+     */
+    private static APIGatewayV2HTTPResponse voiceScript(APIGatewayV2HTTPEvent event) {
+        Map<String, String> query = event.getQueryStringParameters() == null ? Map.of() : event.getQueryStringParameters();
+        String recording = Env.get("VOICE_RECORDING_URL", "");
+        if (recording.startsWith("/")) {
+            // A path on the web application, where the recording is published with the site.
+            recording = Env.get("APP_URL", "") + recording;
+        }
+        return APIGatewayV2HTTPResponse.builder()
+                .withStatusCode(200)
+                .withHeaders(Map.of("content-type", "text/xml; charset=utf-8"))
+                .withBody(TwilioVoiceChannel.script(query.get("text"), recording))
+                .build();
     }
 
     private Response handle(APIGatewayV2HTTPEvent event) {

@@ -264,6 +264,62 @@ class NotificationTest {
     }
 
     @Test
+    void escalationSendsChannelByChannelWithAPauseBetweenThem() {
+        Rule base = rule(null, null, route("voice", "user", "anna"), route("ui", "user", "anna"),
+                route("push", "user", "anna"), route("sms", "user", "anna"), route("email", "user", "anna"));
+        Rule escalating = withEscalation(base, 30);
+        List<String> sent = new ArrayList<>();
+        NotificationDispatcher dispatcher = new NotificationDispatcher(planner,
+                (job, delay) -> sent.add(job.channel() + " after " + delay + " s" + (job.escalated() ? ", if still open" : "")),
+                timeline::add, CLOCK);
+
+        dispatcher.alertCreated(alert(), escalating, source());
+        assertEquals(List.of("voice after 90 s, if still open", "ui after 0 s", "push after 0 s",
+                "sms after 60 s, if still open", "email after 30 s, if still open"), sent);
+
+        // Channels the rule does not use take no step: a call follows the pop-up after one pause, not three.
+        sent.clear();
+        dispatcher.alertCreated(alert(), withEscalation(rule(null, null, route("voice", "user", "anna"),
+                route("ui", "user", "anna")), 30), source());
+        assertEquals(List.of("voice after 30 s, if still open", "ui after 0 s"), sent);
+
+        // Without the setting, and when a person asks for a resend, everything goes at once.
+        sent.clear();
+        dispatcher.alertCreated(alert(), base, source());
+        dispatcher.resend(alert(), escalating, source());
+        assertTrue(sent.stream().allMatch(line -> line.endsWith("after 0 s")), sent.toString());
+    }
+
+    @Test
+    void anEscalationStepIsDroppedOnceSomeoneHasReactedToTheAlert() {
+        List<String> called = new ArrayList<>();
+        boolean[] open = {false};
+        NotificationDelivery delivery = new NotificationDelivery(
+                Map.of("sms", job -> {
+                    called.add(job.notificationId());
+                    return Map.of();
+                }),
+                (job, delay) -> queued.add(job), timeline::add, CLOCK, job -> open[0]);
+
+        assertTrue(delivery.deliver(job(1).asEscalated(), 1));
+        assertTrue(called.isEmpty());
+        assertEquals(TimelineEntry.Type.NOTIFICATION_SUPPRESSED, timeline.get(0).type());
+        assertEquals("alertHandled", timeline.get(0).detail().get("reason"));
+
+        // The first notification of an alert is not a step and goes out regardless.
+        assertTrue(delivery.deliver(job(1), 1));
+        open[0] = true;
+        assertTrue(delivery.deliver(job(1).asEscalated(), 1));
+        assertEquals(2, called.size());
+    }
+
+    private static Rule withEscalation(Rule rule, int stepSeconds) {
+        return new Rule(rule.ruleId(), rule.orgId(), rule.sourceId(), rule.name(), rule.enabled(), rule.match(),
+                rule.severity(), rule.routing(), rule.presentation(), rule.groupBy(), rule.throttle(), rule.runbookId(),
+                rule.createdAt(), rule.updatedAt(), rule.updatedBy(), rule.delivery(), new Rule.Escalation(stepSeconds));
+    }
+
+    @Test
     void deadLetteredJobGetsMoreRoundsAndThenAFinalFailure() {
         NotificationDelivery delivery = delivery(job -> Map.of());
 

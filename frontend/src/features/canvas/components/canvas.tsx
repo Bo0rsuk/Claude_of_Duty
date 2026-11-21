@@ -44,9 +44,9 @@ export function Canvas({
     account,
   } = useWorkspaceContext();
   const [saved, setSaved] = useLocal<StoredTile[]>(
-    // The alert and rule workspaces changed how they open details, so layouts stored for the earlier
+    // The record pages changed how they open details, so layouts stored for the earlier
     // behaviour are left behind under the old key instead of overriding the new default.
-    "fans:layout:" + (panel === "Alerts" || panel === "Rules" ? "2:" : "") + role + ":" + panel,
+    "fans:layout:" + (panel === "Custom" || panel === "Admin" || panel === "Sources" ? "" : "2:") + role + ":" + panel,
     () => defaultLayout(panel),
   );
   const catalog = Object.keys(registry).filter(
@@ -104,9 +104,9 @@ export function Canvas({
   // The alert workspace with its usual widgets opens details beside the feed, however a stored
   // layout sized them. Only a view built from other widgets keeps its own grid.
   const kinds = (layout: { kind: string }[]) => layout.map((t) => t.kind).sort().join();
-  const standard = (name: "Alerts" | "Rules" | "Sources") => panel === name && kinds(tiles) === kinds(defaultLayout(name));
-  const standardAlerts = standard("Alerts"),
-    standardRules = standard("Rules");
+  const standard = panel !== "Custom" && panel !== "Admin" && kinds(tiles) === kinds(defaultLayout(panel));
+  // Pages that open with the list alone and show a record's details beside it once one is chosen.
+  const focus = standard && panel !== "Sources";
   const hasList = tiles.some((t) => registry[t.kind].placement === "list"),
     hasDetail = tiles.some((t) => registry[t.kind].placement === "detail");
   function renderWidget(t: Tile) {
@@ -335,9 +335,10 @@ export function Canvas({
       <div
         className={
           "canvas-wrap " +
-          (standardAlerts ? "focus-canvas alerts-canvas " : "") +
-          (standardRules ? "focus-canvas rules-canvas " : "") +
-          (standard("Sources") ? "sources-canvas " : "") +
+          (focus ? "focus-canvas " : "") +
+          (focus && panel === "Alerts" ? "alerts-canvas " : "") +
+          (focus && panel !== "Alerts" ? "fill-canvas " : "") +
+          (standard && panel === "Sources" ? "sources-canvas " : "") +
           (editing ? "editing " : "") +
           width.toLowerCase()
         }
