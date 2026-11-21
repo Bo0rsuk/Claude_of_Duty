@@ -44,7 +44,9 @@ export function Canvas({
     account,
   } = useWorkspaceContext();
   const [saved, setSaved] = useLocal<StoredTile[]>(
-    "fans:layout:" + role + ":" + panel,
+    // The alert and rule workspaces changed how they open details, so layouts stored for the earlier
+    // behaviour are left behind under the old key instead of overriding the new default.
+    "fans:layout:" + (panel === "Alerts" || panel === "Rules" ? "2:" : "") + role + ":" + panel,
     () => defaultLayout(panel),
   );
   const catalog = Object.keys(registry).filter(
@@ -102,7 +104,9 @@ export function Canvas({
   // The alert workspace with its usual widgets opens details beside the feed, however a stored
   // layout sized them. Only a view built from other widgets keeps its own grid.
   const kinds = (layout: { kind: string }[]) => layout.map((t) => t.kind).sort().join();
-  const standardAlerts = panel === "Alerts" && kinds(tiles) === kinds(defaultLayout("Alerts"));
+  const standard = (name: "Alerts" | "Rules" | "Sources") => panel === name && kinds(tiles) === kinds(defaultLayout(name));
+  const standardAlerts = standard("Alerts"),
+    standardRules = standard("Rules");
   const hasList = tiles.some((t) => registry[t.kind].placement === "list"),
     hasDetail = tiles.some((t) => registry[t.kind].placement === "detail");
   function renderWidget(t: Tile) {
@@ -331,7 +335,9 @@ export function Canvas({
       <div
         className={
           "canvas-wrap " +
-          (standardAlerts ? "alerts-canvas " : "") +
+          (standardAlerts ? "focus-canvas alerts-canvas " : "") +
+          (standardRules ? "focus-canvas rules-canvas " : "") +
+          (standard("Sources") ? "sources-canvas " : "") +
           (editing ? "editing " : "") +
           width.toLowerCase()
         }

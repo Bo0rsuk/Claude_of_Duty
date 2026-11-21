@@ -15,6 +15,8 @@ export function RuleList() {
       sourceFilter,
       setSourceFilter,
       setCompactDetail,
+      compactDetail,
+      panel,
       account,
     } = useWorkspaceContext(),
     [q, setQ] = useState(""),
@@ -73,7 +75,8 @@ export function RuleList() {
         {rows.map((r) => (
           <button
             key={r.id}
-            aria-pressed={r.id === rule.id}
+            // With the editor closed no rule is "open", so none is marked.
+            aria-pressed={r.id === rule.id && (panel !== "Rules" || compactDetail)}
             onClick={() => {
               if (r.id === rule.id) return setCompactDetail(true);
               leaving(() => {

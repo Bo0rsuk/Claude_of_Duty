@@ -30,7 +30,7 @@ export function Inspector() {
           {/* In the alert workspace the details open over part of the feed; closing them gives the feed its full width back. */}
           {compactDetail && panel === "Alerts" && (
             <button
-              className="icon-btn"
+              className="icon-btn close-detail"
               aria-label="Close alert details"
               title="Close alert details"
               onClick={() => setCompactDetail(false)}

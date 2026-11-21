@@ -1,4 +1,5 @@
 import { Box } from "#components/box.tsx";
+import { Modal } from "#components/modal.tsx";
 import { Field } from "#components/field.tsx";
 import { Assistant } from "#features/rules/components/assistant.tsx";
 import { ConditionBuilder } from "#features/rules/components/condition-builder.tsx";
@@ -13,22 +14,55 @@ import { RecipientLimit } from "#features/rules/components/recipient-limit.tsx";
 import { RuleActions } from "#features/rules/components/rule-actions.tsx";
 import { RuleRunbook } from "#features/rules/components/rule-runbook.tsx";
 import { type Rule, useWorkspaceContext } from "#features/workspace";
-import { BookOpen, ChevronRight, ListFilter, SlidersHorizontal } from "lucide-react";
+import { BookOpen, ChevronRight, ListFilter, SlidersHorizontal, X } from "lucide-react";
+import { useState } from "react";
 
 export function RuleEditor() {
-  const { rule, data, editRule } = useWorkspaceContext(),
-    saved = data.rules.find((r) => r.id === rule.id);
+  const { rule, data, editRule, setRule, compactDetail, setCompactDetail, panel } = useWorkspaceContext(),
+    saved = data.rules.find((r) => r.id === rule.id),
+    [closing, setClosing] = useState(false);
+  const edited = saved
+    ? JSON.stringify(saved) !== JSON.stringify(rule)
+    : Boolean(rule.name.trim() || rule.conditions.trim());
+  function close() {
+    // Edits that were not saved are dropped, so the list and a reopened rule show what is stored.
+    if (saved) setRule(saved);
+    setClosing(false);
+    setCompactDetail(false);
+  }
   const change = (key: keyof Rule, v: string) => editRule({ [key]: v });
   return (
     <Box
       icon={SlidersHorizontal}
       title={rule.name || "Draft rule"}
       extra={
-        JSON.stringify(saved) !== JSON.stringify(rule) && (
-          <span className="draft">Unsaved changes</span>
-        )
+        <span className="inspector-tools">
+          {JSON.stringify(saved) !== JSON.stringify(rule) && <span className="draft">Unsaved changes</span>}
+          {/* In the rule workspace the editor opens over half of the list; closing it gives the list the page back. */}
+          {compactDetail && panel === "Rules" && (
+            <button
+              className="icon-btn close-detail"
+              aria-label="Close rule editor"
+              title="Close rule editor"
+              onClick={() => (edited ? setClosing(true) : close())}
+            >
+              <X />
+            </button>
+          )}
+        </span>
       }
     >
+      {closing && (
+        <Modal title="Discard unsaved changes?" onClose={() => setClosing(false)}>
+          <p>“{rule.name || "The draft rule"}” has edits that are not saved. Closing the editor discards them.</p>
+          <div className="buttons">
+            <button onClick={() => setClosing(false)}>Keep editing</button>
+            <button className="danger-btn" onClick={close}>
+              Discard changes
+            </button>
+          </div>
+        </Modal>
+      )}
       <Field label="Rule name">
         <input
           value={rule.name}
