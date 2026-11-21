@@ -33,6 +33,7 @@
     "#features/members": "./src/features/members/index.ts",
     "#features/rules": "./src/features/rules/index.ts",
     "#features/sources": "./src/features/sources/index.ts",
+    "#features/startup": "./src/features/startup/index.ts",
     "#features/workspace": "./src/features/workspace/index.ts"
   }
 }

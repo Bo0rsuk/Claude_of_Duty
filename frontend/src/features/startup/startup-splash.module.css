@@ -1,0 +1,123 @@
+.splash {
+  /* Duck quack is 2400ms; hold it on screen, then hand off like STAGEUI. */
+  --intro-duration: 4800ms;
+  --duck-width: 210px;
+  --tagline-size: 36px;
+  --logo-travel: -48px;
+  --tagline-start: 44px;
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--frame);
+  animation: reveal-workspace var(--intro-duration) linear both;
+}
+
+.scene {
+  position: relative;
+  width: min(1100px, calc(100vw - 64px));
+  height: 220px;
+}
+
+.logoLockup,
+.taglineLockup {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoLockup {
+  will-change: transform, opacity;
+  animation: logo-depart var(--intro-duration) linear both;
+}
+
+.duck {
+  display: block;
+  width: min(var(--duck-width), 100%);
+  height: auto;
+  /* Global svg { width/height: 17px } would crush the mark without this. */
+  max-width: none;
+}
+
+.taglineLockup {
+  animation: tagline-arrive var(--intro-duration) cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+.tagline {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: clamp(28px, 3.2vw, var(--tagline-size));
+  font-weight: 470;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@keyframes logo-depart {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    animation-timing-function: cubic-bezier(0.33, 0, 0.22, 1);
+  }
+  /* Arrive while the bill is still shut (~300ms of the duck clip). */
+  8% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  /* Hold through the full 2400ms quack (50% of 4800ms). */
+  54% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+  68%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, var(--logo-travel), 0);
+  }
+}
+
+@keyframes tagline-arrive {
+  0%,
+  66% {
+    opacity: 0;
+    transform: translateY(var(--tagline-start));
+  }
+  82%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-workspace {
+  0%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .splash {
+    --duck-width: 168px;
+  }
+
+  .scene {
+    width: calc(100vw - 40px);
+    height: 180px;
+  }
+
+  .tagline {
+    font-size: clamp(18px, 5vw, 24px);
+    white-space: normal;
+    max-width: 14em;
+  }
+}

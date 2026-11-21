@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 226 169" width="226" height="169" role="img" aria-label="Squawk">
+  <title>Squawk</title>
+  <!--
+    Startup animation: the bill starts shut, opens slowly, then snaps wide as the
+    sound marks burst out. It plays once and comes to rest on the logo.
+    The bill is three pieces: a fixed hinge plus an upper and a lower half that
+    each turn about the centre of their own rounded end, so the joints stay smooth.
+  -->
+  <style>
+    /* The resting state is the finished logo, so reduced motion shows it as-is. */
+    @media (prefers-reduced-motion: no-preference) {
+      .sq-head { transform-origin: 70.9px 70.25px; animation: sq-tilt 2400ms both; }
+      .sq-upper { transform-origin: 107px 59.5px; animation: sq-upper 2400ms both; }
+      .sq-lower { transform-origin: 88px 83.2px; animation: sq-lower 2400ms both; }
+      .sq-lip { transform-origin: 88px 83.2px; animation: sq-lip 2400ms both; }
+      .sq-eye { transform-origin: 71.3px 55px; animation: sq-squint 420ms 1560ms both; }
+      .sq-mark { transform-origin: 140.5px 84px; animation: sq-burst 440ms cubic-bezier(.2,.7,.3,1) 1605ms both; }
+      .sq-mark:nth-child(2) { animation-delay: 1575ms; }
+    }
+    @keyframes sq-upper {
+      0% { transform: rotate(9deg); }
+      12.5% { transform: rotate(9deg); animation-timing-function: cubic-bezier(.45,0,.35,1); }
+      60% { transform: rotate(2.7deg); animation-timing-function: linear; }
+      65% { transform: rotate(2.52deg); animation-timing-function: cubic-bezier(.2,.8,.3,1); }
+      70% { transform: rotate(-1.17deg); animation-timing-function: ease-in-out; }
+      79% { transform: rotate(0.27deg); animation-timing-function: ease-in-out; }
+      88% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes sq-lower {
+      0% { transform: rotate(-27deg); }
+      12.5% { transform: rotate(-27deg); animation-timing-function: cubic-bezier(.45,0,.35,1); }
+      60% { transform: rotate(-8.1deg); animation-timing-function: linear; }
+      65% { transform: rotate(-7.56deg); animation-timing-function: cubic-bezier(.2,.8,.3,1); }
+      70% { transform: rotate(3.51deg); animation-timing-function: ease-in-out; }
+      79% { transform: rotate(-0.81deg); animation-timing-function: ease-in-out; }
+      88% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes sq-lip {
+      0% { transform: rotate(-40.5deg); }
+      12.5% { transform: rotate(-40.5deg); animation-timing-function: cubic-bezier(.45,0,.35,1); }
+      60% { transform: rotate(-12.15deg); animation-timing-function: linear; }
+      65% { transform: rotate(-11.34deg); animation-timing-function: cubic-bezier(.2,.8,.3,1); }
+      70% { transform: rotate(5.26deg); animation-timing-function: ease-in-out; }
+      79% { transform: rotate(-1.22deg); animation-timing-function: ease-in-out; }
+      88% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes sq-tilt {
+      0% { transform: rotate(0deg); }
+      12.5% { transform: rotate(0deg); animation-timing-function: cubic-bezier(.45,0,.35,1); }
+      60% { transform: rotate(-2deg); animation-timing-function: linear; }
+      65% { transform: rotate(-2.4deg); animation-timing-function: cubic-bezier(.2,.8,.3,1); }
+      70% { transform: rotate(1.6deg); animation-timing-function: ease-in-out; }
+      88% { transform: rotate(0deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes sq-squint {
+      0%, 100% { transform: scaleY(1); }
+      22%, 52% { transform: scaleY(.35); }
+    }
+    @keyframes sq-burst {
+      0% { opacity: 0; transform: scale(.5); }
+      30% { opacity: 1; }
+      60% { transform: scale(1.1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+  </style>
+  <g transform="translate(14 14)" fill="currentColor">
+    <g class="sq-head">
+      <path d="M134.4 40.8A70 70 0 1 0 124.7 115.1C125 114.4 125.7 113.8 125.7 113.1C125.7 112.5 125.1 112 124.6 111.7C123.8 111.2 122.9 111 122 110.6L112.4 106.9C111.5 106.7 110.7 106.3 109.8 106.2C109 106.2 108.1 106.4 107.3 106.6C106.6 106.8 105.9 107.1 105.2 107.5C104.3 107.9 103.6 108.5 102.7 109C101.9 109.4 101.1 109.9 100.3 110.2C99.6 110.5 98.9 110.7 98.1 110.9A49.8 49.8 0 1 1 112.5 43.2C113.1 44.7 113.5 46.2 114.3 47.6C115 48.7 115.8 49.8 116.9 50.6C117.9 51.3 119.1 51.5 120.2 51.7C121.5 51.9 122.9 51.9 124.2 51.8C125.7 51.7 127.1 51.3 128.5 50.9C129.8 50.5 131 50 132.2 49.4C133.1 48.9 134.1 48.5 134.5 47.6C134.9 46.7 134.6 45.6 134.6 44.6C134.6 43.3 134.5 42.1 134.4 40.8Z"/>
+      <circle class="sq-eye" cx="71.3" cy="55" r="8.1"/>
+      <path d="M102.9 55.2C102.4 55.8 101.9 56.4 101.5 57C101.1 57.6 100.8 58.3 100.5 59C100.1 60 99.8 61 99.5 62C99.2 63 98.9 64 98.5 65C98 66.1 97.5 67.1 96.9 68.1C96.4 68.9 95.8 69.7 95.2 70.5C94.7 71.1 94.2 71.6 93.6 72.1C92.8 72.8 91.9 73.4 91 74C90.3 74.4 89.5 74.8 88.7 75.1C87.8 75.5 86.9 75.7 86 76.1C85.4 76.4 84.7 76.6 84.2 77C83.5 77.5 82.9 78.1 82.3 78.7L84.5 84L93 86.3L101.5 86.6C100.9 86 100.3 85.4 99.6 84.9C99.1 84.6 98.5 84.6 98.1 84.2C97.8 83.9 97.5 83.4 97.5 83C97.5 82.7 97.7 82.4 97.9 82.2C98.2 81.9 98.7 81.7 99.1 81.6C100 81.3 101 81.1 102 80.9C103 80.7 104 80.5 105 80.3C105.5 80.3 106.1 80.3 106.6 80.1C107.3 79.9 107.9 79.5 108.5 79.2L106.5 62Z"/>
+      <path class="sq-upper" d="M102.2 63.5C101.7 62.4 100.8 61.3 100.7 60C100.6 58.8 100.9 57.5 101.5 56.4C102.1 55.3 103.1 54.5 104 53.9C104.9 53.5 105.8 53.3 106.8 53.2C108 53.1 109.3 53.1 110.5 53.3C112 53.6 113.5 54.3 115 54.7C116.3 55.1 117.7 55.4 119 55.6C120.2 55.8 121.4 56 122.6 55.9C124.1 55.8 125.5 55.5 127 55.2C129 54.8 131 54.4 133 53.9C134.4 53.5 135.7 53 137 52.6C138.5 52.1 140 51.5 141.5 51.1C142.7 50.8 143.8 50.5 145 50.3C146.2 50.1 147.3 50 148.5 50.1C149.5 50.2 150.6 50.4 151.5 50.9C152.3 51.4 153 52.1 153.5 52.9C154 53.8 154.4 54.8 154.4 55.8C154.4 56.7 154 57.7 153.6 58.5C153.1 59.5 152.3 60.4 151.5 61.3C150.8 62 150.1 62.6 149.3 63.2C148 64.2 146.7 65 145.3 65.9C143.6 67 141.8 68.1 140 69C137.7 70.1 135.3 71 133 72C130.7 73 128.4 74 126 74.9C123.9 75.7 121.7 76.3 119.5 77C117.3 77.7 115.2 78.4 113 78.9C111.2 79.3 109.3 79.7 107.5 79.9C106.3 80.1 105.2 80 104 80.1C102.7 80.2 101.3 80.2 100 80.3C99 80.4 98 80.4 97 80.5Z"/>
+      <path class="sq-lower" d="M96.3 84.3C97.1 84.4 98 84.6 98.8 84.7C100.2 84.9 101.6 84.9 103 85.1C104.7 85.3 106.3 85.5 108 85.7C110.3 86 112.7 86.3 115 86.7C116.7 87 118.4 87.2 120 87.7C122.2 88.3 124.3 89.2 126.5 90C128.2 90.6 129.9 91.2 131.5 92C133.5 92.9 135.3 94 137.2 95.1C138.7 96 140.2 96.8 141.6 97.9C142.8 98.8 144 99.9 144.9 101.1C145.5 101.9 146 102.8 146.1 103.7C146.2 104.5 146.1 105.5 145.6 106.2C145.1 107 144.2 107.6 143.3 107.9C141.8 108.3 140.1 108.2 138.5 108.2C137 108.2 135.5 108 134 107.7C132.3 107.4 130.6 107 129 106.5C127.4 106.1 125.9 105.6 124.4 105C122.4 104.3 120.5 103.4 118.6 102.6C116.6 101.7 114.5 100.8 112.5 100C110.8 99.3 109.1 98.7 107.4 98C105.1 97 102.9 95.9 100.6 95C98.8 94.3 96.9 93.7 95 93.1C93.3 92.6 91.7 92 90 91.5C88.7 91.1 87.3 90.9 86.1 90.3C84.7 89.7 83.3 89.1 82.3 88C81.4 86.8 80.8 85.3 80.6 83.8C80.5 82.4 80.8 80.8 81.6 79.5C82.3 78.2 83.5 77.1 84.9 76.5C86.2 75.9 87.8 75.7 89.3 75.9C90.6 76.1 91.6 77 92.8 77.5Z"/>
+      <!-- Tucked inside the lower half; turns a little faster so the mouth seals from the corner outward. -->
+      <path class="sq-lip" d="M93 84C94.1 84.2 95.2 84.5 96.3 84.7C97.2 84.9 98.1 84.9 99 85C100 85.2 101 85.3 102 85.5C103 85.8 104 86.1 105 86.3C106 86.6 107 86.8 108 87.2C109 87.6 110 88.1 111 88.5C112 88.9 113 89.3 114 89.7C115 90 116 90.3 117 90.8C117.7 91.1 118.3 91.6 119 92L114 94L104 92L95 89Z"/>
+    </g>
+    <g>
+      <path class="sq-mark" d="M162.1 73.5A2 2 0 0 1 160 70.1L178.2 56A4.4 4.4 0 1 1 182.8 63.5Z"/>
+      <path class="sq-mark" d="M163.5 86.4A2.4 2.4 0 0 1 163.4 81.6L192 78.4A5.3 5.3 0 1 1 192.1 89Z"/>
+      <path class="sq-mark" d="M159.2 98.4A1.9 1.9 0 0 1 161.2 95.2L181.6 104.4A4.5 4.5 0 1 1 177 112.1Z"/>
+    </g>
+  </g>
+</svg>

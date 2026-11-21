@@ -1,5 +1,6 @@
 import { Modal } from "#components/modal.tsx";
 import { Canvas } from "#features/canvas";
+import { StartupSplash } from "#features/startup";
 import {
   AccountMenu,
   type Panel,
@@ -20,6 +21,18 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+const INTRO_SEEN_KEY = "squawk-intro-seen";
+
+function shouldShowIntro() {
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
+  if (new URLSearchParams(window.location.search).has("intro")) return true;
+  try {
+    return window.sessionStorage.getItem(INTRO_SEEN_KEY) !== "true";
+  } catch {
+    return true;
+  }
+}
 
 const titles: Record<Panel, string> = {
   Alerts: "Alert workspace",
@@ -48,12 +61,23 @@ export function App() {
     setCompactDetail,
     rule,
   } = useWorkspaceContext();
+  const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const [collapsed, setCollapsed] = useLocal("fans:collapsed", () => false),
     [drawer, setDrawer] = useState(false),
     [editing, setEditing] = useState(false),
     [account, setAccount] = useState(false),
     [access, setAccess] = useState("Assigned"),
     [leave, setLeave] = useState<null | (() => void)>(null);
+
+  function finishIntro() {
+    setShowIntro(false);
+    try {
+      window.sessionStorage.setItem(INTRO_SEEN_KEY, "true");
+    } catch {
+      /* Intro still finishes when storage is unavailable. */
+    }
+  }
+
   const main = useRef<HTMLElement>(null);
   const user =
     access === "Assigned"
@@ -152,122 +176,127 @@ export function App() {
     </button>
   );
   return (
-    <div className={"app " + (collapsed ? "is-collapsed" : "")}>
-      <a
-        className="skip"
-        href="#main"
-        onClick={(e) => {
-          e.preventDefault();
-          main.current?.focus();
-        }}
-      >
-        Skip to workspace
-      </a>
-      <aside className="sidebar" id="workspace-sidebar">
-        {sidebar}
-      </aside>
-      <div className="app-main">
-        <header className="utility">
-          <button
-            className="mobile-menu icon-btn"
-            aria-label="Open navigation"
-            onClick={() => setDrawer(true)}
+    <>
+      <div inert={showIntro} aria-hidden={showIntro}>
+        <div className={"app " + (collapsed ? "is-collapsed" : "")}>
+          <a
+            className="skip"
+            href="#main"
+            onClick={(e) => {
+              e.preventDefault();
+              main.current?.focus();
+            }}
           >
-            <Menu />
-          </button>
-          <div className="crumb">
-            <button
-              className="sidebar-toggle icon-btn"
-              aria-label={
-                collapsed ? "Expand navigation" : "Compact navigation"
-              }
-              aria-controls="workspace-sidebar"
-              aria-expanded={!collapsed}
-              title={collapsed ? "Expand navigation" : "Compact navigation"}
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              <PanelLeft aria-hidden="true" />
-            </button>
-            <span className="crumb-workspace">Workspace</span>
-            <span className="compact-wordmark">
-              <img className="brand-mark" src="/squawk.png" alt="Squawk" width={198} height={141} />
-              <span aria-hidden="true">Squawk</span>
-            </span>
-            <ChevronRight />
-            <strong>{access === "Assigned" ? panel : "Join team"}</strong>
-          </div>
-          {customizeButton && (
-            <div className="view-toolbar" role="group" aria-label="View controls">
-              {customizeButton}
-            </div>
-          )}
-        </header>
-        <main id="main" tabIndex={-1} ref={main} aria-label={alertWorkspace ? "Alerts" : undefined}>
-          <h1 className="sr">
-            {alertWorkspace
-              ? "Alerts"
-              : access === "Assigned"
-                ? titles[panel]
-                : "Team access"}
-          </h1>
-          {content}
-        </main>
-      </div>
-      {drawer && (
-        <Modal drawer title="Navigation" onClose={() => setDrawer(false)}>
-          {sidebar}
-        </Modal>
-      )}
-      {(prototype || account) && (
-        <AccountMenu
-          user={user}
-          access={access}
-          changeAccess={changeAccess}
-          switchRole={switchRole}
-          closeAccount={() => setAccount(false)}
-        />
-      )}
-      {leave && (
-        <Modal title="Leave this view?" onClose={() => setLeave(null)}>
-          <p>You have unsaved edits. Save the current view to keep them.</p>
-          <div className="buttons">
-            <button onClick={() => setLeave(null)}>Keep editing</button>
-            <button
-              onClick={() => {
-                leave();
-                setLeave(null);
-              }}
-            >
-              Leave view
-            </button>
-          </div>
-        </Modal>
-      )}
-      <div className="toast-region" aria-live="polite">
-        {notice && (
-          <div className="toast">
-            <CircleCheck />
-            {notice.text}
-            {notice.undo && (
+            Skip to workspace
+          </a>
+          <aside className="sidebar" id="workspace-sidebar">
+            {sidebar}
+          </aside>
+          <div className="app-main">
+            <header className="utility">
               <button
-                onClick={() => {
-                  notice.undo?.();
-                  notify("Change undone.");
-                }}
+                className="mobile-menu icon-btn"
+                aria-label="Open navigation"
+                onClick={() => setDrawer(true)}
               >
-                Undo
+                <Menu />
               </button>
-            )}
-            <button
-              className="icon-btn"
-              aria-label="Dismiss notification"
-              onClick={() => setNotice(null)}
-            >
-              <X />
-            </button>
+              <div className="crumb">
+                <button
+                  className="sidebar-toggle icon-btn"
+                  aria-label={
+                    collapsed ? "Expand navigation" : "Compact navigation"
+                  }
+                  aria-controls="workspace-sidebar"
+                  aria-expanded={!collapsed}
+                  title={collapsed ? "Expand navigation" : "Compact navigation"}
+                  onClick={() => setCollapsed(!collapsed)}
+                >
+                  <PanelLeft aria-hidden="true" />
+                </button>
+                <span className="crumb-workspace">Workspace</span>
+                <span className="compact-wordmark">
+                  <img className="brand-mark" src="/squawk.png" alt="Squawk" width={198} height={141} />
+                  <span aria-hidden="true">Squawk</span>
+                </span>
+                <ChevronRight />
+                <strong>{access === "Assigned" ? panel : "Join team"}</strong>
+              </div>
+              {customizeButton && (
+                <div className="view-toolbar" role="group" aria-label="View controls">
+                  {customizeButton}
+                </div>
+              )}
+            </header>
+            <main id="main" tabIndex={-1} ref={main} aria-label={alertWorkspace ? "Alerts" : undefined}>
+              <h1 className="sr">
+                {alertWorkspace
+                  ? "Alerts"
+                  : access === "Assigned"
+                    ? titles[panel]
+                    : "Team access"}
+              </h1>
+              {content}
+            </main>
           </div>
-        )}
+          {drawer && (
+            <Modal drawer title="Navigation" onClose={() => setDrawer(false)}>
+              {sidebar}
+            </Modal>
+          )}
+          {(prototype || account) && (
+            <AccountMenu
+              user={user}
+              access={access}
+              changeAccess={changeAccess}
+              switchRole={switchRole}
+              closeAccount={() => setAccount(false)}
+            />
+          )}
+          {leave && (
+            <Modal title="Leave this view?" onClose={() => setLeave(null)}>
+              <p>You have unsaved edits. Save the current view to keep them.</p>
+              <div className="buttons">
+                <button onClick={() => setLeave(null)}>Keep editing</button>
+                <button
+                  onClick={() => {
+                    leave();
+                    setLeave(null);
+                  }}
+                >
+                  Leave view
+                </button>
+              </div>
+            </Modal>
+          )}
+          <div className="toast-region" aria-live="polite">
+            {notice && (
+              <div className="toast">
+                <CircleCheck />
+                {notice.text}
+                {notice.undo && (
+                  <button
+                    onClick={() => {
+                      notice.undo?.();
+                      notify("Change undone.");
+                    }}
+                  >
+                    Undo
+                  </button>
+                )}
+                <button
+                  className="icon-btn"
+                  aria-label="Dismiss notification"
+                  onClick={() => setNotice(null)}
+                >
+                  <X />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+      {showIntro && <StartupSplash onComplete={finishIntro} />}
+    </>
   );
 }
