@@ -99,7 +99,7 @@ export function App() {
     return () => window.removeEventListener("hashchange", read);
   }, [role]);
   useEffect(() => {
-    document.title = titles[panel] + " · FANS";
+    document.title = titles[panel] + " · Squawk";
   }, [panel]);
   useEffect(() => {
     if (!notice) return;
@@ -189,7 +189,10 @@ export function App() {
               <PanelLeft aria-hidden="true" />
             </button>
             <span className="crumb-workspace">Workspace</span>
-            <span className="compact-wordmark">FANS</span>
+            <span className="compact-wordmark">
+              <img className="brand-mark" src="/squawk.png" alt="Squawk" width={198} height={141} />
+              <span aria-hidden="true">Squawk</span>
+            </span>
             <ChevronRight />
             <strong>{access === "Assigned" ? panel : "Join team"}</strong>
           </div>

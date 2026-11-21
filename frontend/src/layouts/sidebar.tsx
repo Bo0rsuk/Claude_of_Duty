@@ -64,7 +64,10 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
   }
   return (
     <>
-      <div className="brand">FANS</div>
+      <div className="brand">
+        <img className="brand-mark" src="/squawk.png" alt="Squawk" width={198} height={141} />
+        <span aria-hidden="true">Squawk</span>
+      </div>
       <SidebarNavigation panel={access === "Assigned" ? panel : null}>
         {access === "Assigned" && (
           <>

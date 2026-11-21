@@ -290,10 +290,16 @@ pre,
   height: var(--toolbar-height);
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   padding: 0 var(--space-6);
   flex-shrink: 0;
-  font: var(--weight-semibold) var(--text-3xl) / 1 var(--display);
-  letter-spacing: -0.075em;
+  font: var(--weight-semibold) var(--text-2xl) / 1 var(--display);
+  letter-spacing: var(--tracking-display);
+}
+.brand-mark {
+  flex-shrink: 0;
+  width: auto;
+  height: 1em;
 }
 .sidebar-nav {
   position: relative;
@@ -428,8 +434,10 @@ pre,
 }
 .is-collapsed .sidebar .brand {
   padding: 0;
-  font-size: var(--text-xl);
   justify-content: center;
+}
+.is-collapsed .sidebar .brand span {
+  display: none;
 }
 .is-collapsed .sidebar .nav-section a,
 .is-collapsed .sidebar-bottom button {
@@ -1874,6 +1882,9 @@ dialog::backdrop {
   main {
     padding-bottom: var(--space-6);
   }
+  .brand {
+    font-size: var(--text-xl);
+  }
   .nav-section {
     margin-left: var(--space-2);
     margin-right: var(--space-2);
@@ -1903,9 +1914,10 @@ dialog::backdrop {
   }
   .sidebar .brand {
     padding: 0;
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     justify-content: center;
   }
+  .sidebar .brand span,
   .sidebar .nav-section h2,
   .sidebar .nav-section a span,
   .sidebar .nav-section small,
@@ -2021,7 +2033,9 @@ dialog::backdrop {
     display: none;
   }
   .compact-wordmark {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
     font: var(--weight-semibold) var(--text-lg) var(--display);
     color: var(--ink);
     letter-spacing: var(--tracking-display);
@@ -2071,6 +2085,12 @@ dialog::backdrop {
   }
   .join {
     padding: var(--space-4);
+  }
+}
+@media (max-width: 480px) {
+  /* Leaves room for the panel name next to the Customize view button. */
+  .compact-wordmark span {
+    display: none;
   }
 }
 @media (max-width: 420px) {

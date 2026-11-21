@@ -1,4 +1,4 @@
-# FANS
+# Squawk
 
 Organizuj kod według funkcji w `src/features/<funkcja>/`. Każdy moduł udostępnia publiczne API w `index.ts`. Z innego modułu importuj je przez `#features/<funkcja>`. Aliasy są zadeklarowane w `package.json`.
 
