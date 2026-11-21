@@ -688,6 +688,8 @@ main:focus {
 }
 .canvas-wrap {
   container-type: inline-size;
+  /* Named so that a rule deep inside a tile can still ask about the whole workspace's width. */
+  container-name: canvas;
 }
 .canvas-grid {
   display: grid;
@@ -2578,7 +2580,7 @@ dialog::backdrop {
   min-width: 0;
 }
 /* On a narrow screen the details replace the feed and "Back to list" above them is the way back. */
-@container (max-width: 899px) {
+@container canvas (max-width: 899px) {
   .alerts-canvas:not(.editing) .inspector-tools .icon-btn {
     display: none;
   }

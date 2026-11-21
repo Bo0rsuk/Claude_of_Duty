@@ -24,7 +24,7 @@ notification_sender_domain = "squawk.com.pl"
 
 # Recipients to verify while the SES account is in the sandbox, where mail
 # can go to verified addresses only. Each gets a confirmation link.
-notification_verified_recipients = []
+notification_verified_recipients = ["krzysztofsmogorzewski50@gmail.com"]
 
 # Push notifications. The key pair is not here: create it once with
 #   java -cp backend/lambdas/target/lambdas.jar com.claudeofduty.lambda.tools.VapidKeys

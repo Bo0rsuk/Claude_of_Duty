@@ -99,6 +99,10 @@ export function Canvas({
     previousDetail.current = compactDetail;
   }, [compactDetail]);
   const back = () => setCompactDetail(false);
+  // The alert workspace with its usual widgets opens details beside the feed, however a stored
+  // layout sized them. Only a view built from other widgets keeps its own grid.
+  const kinds = (layout: { kind: string }[]) => layout.map((t) => t.kind).sort().join();
+  const standardAlerts = panel === "Alerts" && kinds(tiles) === kinds(defaultLayout("Alerts"));
   const hasList = tiles.some((t) => registry[t.kind].placement === "list"),
     hasDetail = tiles.some((t) => registry[t.kind].placement === "detail");
   function renderWidget(t: Tile) {
@@ -327,10 +331,7 @@ export function Canvas({
       <div
         className={
           "canvas-wrap " +
-          (panel === "Alerts" &&
-          JSON.stringify(tiles) === JSON.stringify(defaultLayout("Alerts"))
-            ? "alerts-canvas "
-            : "") +
+          (standardAlerts ? "alerts-canvas " : "") +
           (editing ? "editing " : "") +
           width.toLowerCase()
         }
