@@ -1,0 +1,65 @@
+.splash {
+  /* Duck quack is 2400ms; then the splash fades into the workspace. */
+  --intro-duration: 3200ms;
+  --duck-width: 210px;
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--frame);
+  animation: reveal-workspace var(--intro-duration) linear both;
+}
+
+.scene {
+  display: grid;
+  place-items: center;
+  width: min(1100px, calc(100vw - 64px));
+  animation: duck-arrive var(--intro-duration) linear both;
+}
+
+.duck {
+  display: block;
+  width: min(var(--duck-width), 100%);
+  height: auto;
+  /* Global svg { width/height: 17px } would crush the mark without this. */
+  max-width: none;
+}
+
+@keyframes duck-arrive {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    animation-timing-function: cubic-bezier(0.33, 0, 0.22, 1);
+  }
+  /* Arrive while the bill is still shut (~300ms of the duck clip). */
+  10% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes reveal-workspace {
+  0%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .splash {
+    --duck-width: 168px;
+  }
+
+  .scene {
+    width: calc(100vw - 40px);
+  }
+}
