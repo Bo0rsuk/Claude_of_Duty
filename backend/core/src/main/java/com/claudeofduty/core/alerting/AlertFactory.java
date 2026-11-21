@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.UUID;
 
 /** Builds an alert from the first event of a group, rendering the rule's presentation. */
 final class AlertFactory {
@@ -22,14 +22,18 @@ final class AlertFactory {
         this.appUrl = appUrl;
     }
 
-    /** Starts with the creation time in milliseconds, so ids sort from oldest to newest. */
+    /**
+     * Starts with the creation time in milliseconds, so ids sort from oldest to newest.
+     * The random part comes from UUID, which stays unique across Lambda environments
+     * restored from the same SnapStart snapshot. A seeded generator would not.
+     */
     static String newAlertId(Instant now) {
-        return String.format("%013d-%08x", now.toEpochMilli(), ThreadLocalRandom.current().nextInt());
+        return String.format("%013d-%s", now.toEpochMilli(), UUID.randomUUID().toString().substring(0, 8));
     }
 
     Alert create(String alertId, String fingerprint, Rule rule, Source source,
             NormalizedEvent first, long count, Instant lastSeenAt, Instant now) {
-        Map<String, Object> variables = variables(alertId, rule, source, first, count);
+        Map<String, Object> variables = AlertVariables.of(alertId, rule, source, first, count, appUrl);
         Presentation presentation = rule.presentation();
         String title = presentation == null || presentation.title() == null
                 ? rule.name()
@@ -44,20 +48,6 @@ final class AlertFactory {
                 count, first.eventTime(), lastSeenAt, first, rule.runbookId(),
                 null, null, null, null, null,
                 new Alert.Timing(first.receivedAt(), now));
-    }
-
-    /** The placeholders listed in Docs/contracts/rules.md. */
-    private Map<String, Object> variables(
-            String alertId, Rule rule, Source source, NormalizedEvent event, long count) {
-        Map<String, Object> variables = new LinkedHashMap<>(event.fields());
-        variables.put(EventFields.LEVEL, EventFields.value(event, EventFields.LEVEL));
-        variables.put(EventFields.MESSAGE, event.message());
-        variables.put("severity", rule.severity());
-        variables.put("ruleName", rule.name());
-        variables.put("sourceName", source.name());
-        variables.put("count", count);
-        variables.put("alertUrl", appUrl + "/alerts/" + alertId);
-        return variables;
     }
 
     private static Map<String, Object> shownFields(Presentation presentation, NormalizedEvent event) {

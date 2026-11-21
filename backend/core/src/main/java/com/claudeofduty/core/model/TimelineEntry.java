@@ -17,6 +17,7 @@ public record TimelineEntry(
         NOTIFICATION_SENT,
         NOTIFICATION_FAILED,
         NOTIFICATION_SUPPRESSED,
+        NOTIFICATIONS_RESENT,
         ACKNOWLEDGED,
         ASSIGNED,
         RESOLVED,

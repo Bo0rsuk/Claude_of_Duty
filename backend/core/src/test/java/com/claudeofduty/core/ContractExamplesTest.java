@@ -20,6 +20,7 @@ import com.claudeofduty.core.model.Runbook;
 import com.claudeofduty.core.model.Severity;
 import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.model.TimelineEntry;
+import com.claudeofduty.core.service.PreviewService;
 import java.time.Instant;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -58,6 +59,16 @@ class ContractExamplesTest {
         presets.stream()
                 .filter(preset -> preset.parser().format().equals("regex"))
                 .forEach(preset -> Pattern.compile(preset.parser().pattern()));
+    }
+
+    @Test
+    void presetsServedByTheApiAreTheOnesInTheContract() {
+        List<Source> documented = ContractDocs.mockPresets();
+        List<Source> served = PreviewService.presets();
+
+        assertEquals(documented.stream().map(Source::connector).toList(), served.stream().map(Source::connector).toList());
+        assertEquals(documented.stream().map(Source::parser).toList(), served.stream().map(Source::parser).toList());
+        assertTrue(served.stream().noneMatch(preset -> preset.name() == null || preset.name().isBlank()));
     }
 
     @Test

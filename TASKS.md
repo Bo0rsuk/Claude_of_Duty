@@ -15,19 +15,28 @@ Wspólne: `Docs/contracts/` (schematy i lista endpointów). Zmiana kontraktu po 
 
 Wpiszcie imiona przy literach, zanim zaczniecie.
 
-## Stan na 2026-11-20
+## Stan na 2026-11-21
 
-Zrobione:
-- **Mock źródeł danych** - wdrożony pod `https://datasource.waw-out.pl`, Kafka pod `datasource.waw-out.pl:9092`. Opis w `mocks/datasource/README.md`.
-- **Infrastruktura aplikacji** - `infra/app/` wdrożona (`terraform apply` przeszedł).
-- **Szkic kontraktów K1-K7** - `Docs/contracts/`. Czeka na przegląd całej trójki.
-- **Backend: ingest i processor** - webhook -> Kinesis -> parser -> reguły -> dedup -> alert w DynamoDB -> publikacja do AppSync. 43 testy lokalne, w tym "500 identycznych eventów daje 1 alert". Processor czeka na wdrożenie i sprawdzenie na AWS.
-- **Dane demo** - `demo/seed/` (źródło webhook i dwie reguły), wgrywane narzędziem `Seed`, dopóki nie ma API.
+Zrobione i sprawdzone na AWS:
+- **Źródła danych** - mock pod `https://datasource.waw-out.pl` (JSON API, dwa logi tekstowe, Kafka, webhook) i worker z konektorami HTTP pull i Kafka.
+- **Ingest i processor** - Kinesis -> parser -> reguły -> dedup -> alert w DynamoDB -> AppSync.
+- **REST API** - organizacja i role, alerty z akcjami i timeline, CRUD źródeł, reguł, grup i runbooków, podgląd parsera i reguły.
+- **Asystent reguł** - Google Gemini (`gemini-flash-lite-latest`), klucz w SSM.
+- **Powiadomienia** - routing, grupy, szablony per kanał, throttling, SMS i email dochodzą, voice symulowany, ponawianie przez DLQ.
+- **Load test** - 200 osobnych alertów/s bez strat (end-to-end p99 574 ms), 5000 identycznych eventów daje 1 alert. Wyniki i ograniczenia: `loadtest/README.md`.
+- **Dane demo** - organizacja `demo` (kod `DEMO-2026`): pięć źródeł, osiem reguł, cztery runbooki.
+
+Zrobione, czeka na wdrożenie:
+- **Push** - kanał `push` (Web Push, szyfrowanie zgodne z RFC 8291), rejestracja urządzeń, strona testowa.
+- **Zamknięte kanały live feedu** - subskrypcja tylko do kanałów własnej organizacji, na podstawie atrybutu `custom:orgId` w tokenie Cognito.
+- **Ponowna wysyłka powiadomień** - `POST /alerts/{alertId}/resend`.
+
+Dla frontendu: `Docs/frontend-integration/` - instrukcja, typy TypeScript, klient live feedu, moduł push i service worker.
 
 Najbliższe kroki:
-1. Wdrożyć processor (`./mvnw package` + `terraform apply`), wgrać dane demo, sprawdzić alert w `cod-alerts`. Potem ustawić `webhook_url` w `infra/datasource`, żeby mock pchał eventy sam.
-2. API: `GET /alerts`, szczegóły i timeline (B5, B13), żeby frontend miał co wyświetlić - to domyka M1 razem z live feedem (C3).
-3. Notifier z kanałami i throttlingiem (B8, B9), CRUD reguł i źródeł (B6), worker z konektorami pull i Kafka (A8).
+1. `terraform apply`, wygenerować klucze push (`VapidKeys`), sprawdzić izolację kanałów i push na telefonie.
+2. Frontend według instrukcji (C1-C13).
+3. Końcowe pomiary po decyzji o limicie Lambdy (A12, A14), ewentualnie ingest bez Lambdy.
 
 ## Przepływ danych (dla orientacji)
 
@@ -60,11 +69,11 @@ Pierwsze 30 minut równolegle, ostatnie 15 minut wspólny przegląd i zamrożeni
 
 **A - ryzyka i konto AWS**
 - [ ] R1: konto AWS hackathonu z dostępem dla całej trójki, wybór regionu, backend stanu Terraform (S3). Profil firmowy odpada - SCP blokuje tam `eu-central-1`, więc `terraform plan` nie przechodzi
-- [ ] R2: SMS - sandbox SNS, zweryfikować numery wszystkich trzech osób
-- [ ] R3: email - sandbox SES, zweryfikować adresy nadawcy i odbiorców
+- [x] R2: SMS - sandbox SNS działa, numer zweryfikowany, SMS dochodzi (potwierdzone w logach dostarczenia). Limit wydatków to 1 USD miesięcznie, czyli ok. 31 SMS-ów
+- [x] R3: email - SES przyjmuje wysyłkę; nadawca z `gmail.com` może trafiać do spamu, przejście na `alerts@waw-out.pl` z DKIM jest przygotowane w `terraform.tfvars`
 - [ ] R4: voice - czy da się zdobyć numer z obsługą połączeń; jeśli nie, kanał voice zostaje mockiem z wpisem w timeline
-- [ ] R5: Bedrock - dostęp do małego modelu (Nova Micro albo Claude Haiku) w wybranym regionie
-- [ ] R6: limit współbieżności Lambdy na koncie (na świeżych kontach bywa 10) - jeśli niski, od razu wniosek o podniesienie
+- [x] R5: model AI - zamiast Bedrocka używamy Google Gemini przez klucz API
+- [ ] R6: limit współbieżności Lambdy na koncie wynosi 10 i to on ogranicza przepustowość (503 przy 50 eventach/s). Trzeba zgłosić podniesienie: `aws service-quotas request-service-quota-increase --service-code lambda --quota-code L-B99A9384 --desired-value 1000`
 - [x] R7: domena `waw-out.pl`, DNS w home.pl, rekord A `datasource` wskazuje na Elastic IP mocka
 
 **B - schematy danych** (`Docs/contracts/`)
@@ -95,18 +104,18 @@ Szkice K1-K7 są gotowe. Odhaczcie je po wspólnym przeglądzie.
 - [x] A5: wdrożenie dwiema komendami (`./mvnw package` + `terraform apply`), opisane w `README.md`
 
 ### Blok 2 (3:00-6:30)
-- [ ] A6: S3 + CloudFront dla frontendu, SnapStart na Lambdzie api
+- [x] A6: S3 + CloudFront dla frontendu (`infra/app/frontend.tf`), SnapStart na wszystkich funkcjach
 - [x] A7: mock VM w docker-compose - JSON API, log aplikacji, access log, Kafka (natywnie na 9092 i REST pod `/kafka`), webhook; scenariusze: zwykły ruch i burst 500 identycznych błędów (`POST /scenarios/burst`)
 - [x] A7a: Terraform dla mock VM w `infra/datasource/`
 - [x] A7b: mock VM wdrożony pod `https://datasource.waw-out.pl` (Kafka: `datasource.waw-out.pl:9092`), certyfikat działa
-- [ ] A8: worker z konektorami (Java, to samo repo) - HTTP poller z kursorem (`after` w zapytaniu, następny w `next_after` albo nagłówku `X-Next-After`) dla `/api/events`, `/logs`, `/logs/access` oraz konsument Kafki dla topicu `infra.events`, piszące do Kinesis; konfiguracja źródeł czytana z DynamoDB
-- [ ] A9: SQS per kanał + DLQ + mapowania do notifiera i Lambdy ponawiającej; tożsamości SES, uprawnienia SNS
-- [ ] A10: skrypt load testu - generator N eventów/s na webhook + klient WebSocket mierzący ingest -> UI; liczy throughput, p50, p99 i zapisuje wyniki do pliku
+- [x] A8: worker z konektorami (`backend/worker`) - HTTP pull z kursorem dla `/api/events`, `/logs`, `/logs/access` i konsument Kafki dla `infra.events`, piszące do Kinesis; źródła odświeżane z DynamoDB co 15 s. Sprawdzony lokalnie na wszystkich czterech źródłach; instancja EC2 w `infra/app/worker.tf` czeka na `terraform apply`
+- [x] A9: SQS per kanał + DLQ + mapowania do notifiera (także z DLQ); tożsamość nadawcy SES przez `notification_sender_email`
+- [x] A10: skrypt load testu (`loadtest/`) - generator eventów w stałym tempie + klient WebSocket mierzący ingest -> UI; liczy throughput, p50, p90, p99 i zapisuje wyniki do plików
 
 ### Blok 3 (6:30-8:30)
-- [ ] A11: asystent filtra - `POST /ai/rule-suggestion` (Bedrock): przykładowy event + opis celu -> JSON warunków reguły, walidowany względem K2
-- [ ] A12: pierwsze pomiary i strojenie (liczba shardów, batch size, parallelization factor, pamięć Lambdy)
-- [ ] A13 (jeśli starczy czasu): RabbitMQ jako kolejne źródło (mock go nie ma), podpowiadanie mapowania custom source przez AI, voice
+- [x] A11: asystent filtra - `POST /ai/rule-suggestion` na Google Gemini (`gemini-flash-lite-latest`, klucz w SSM): cel w języku naturalnym + pola z ostatnich eventów źródła -> warunki reguły, walidowane i od razu sprawdzone na ostatnich eventach. Sprawdzony na prawdziwym modelu, czeka na wdrożenie
+- [ ] A12: pomiary i strojenie - pomiar bazowy zrobiony (`loadtest/README.md`); optymalizacje (SnapStart, równoległy zapis alertów, podział współbieżności) czekają na `terraform apply` i ponowny pomiar
+- [ ] A13: powiadomienia push (kanał `push`, rejestracja urządzeń, strona testowa `demo/push-test/`) - napisane i przetestowane lokalnie, czeka na wdrożenie i próbę na prawdziwym telefonie. Poza tym, jeśli starczy czasu: prawdziwy kanał voice, RabbitMQ jako kolejne źródło
 
 ### Blok 4 (8:30-10:00)
 - [ ] A14: finalne load testy, tabela i wykres p50/p99 do prezentacji, opis metodologii pomiaru
@@ -120,22 +129,22 @@ Szkice K1-K7 są gotowe. Odhaczcie je po wspólnym przeglądzie.
 - [x] B2: interfejs `Parser` + rejestr parserów po formacie; parser JSON (spłaszczanie, `split` na tablicy) i normalizacja eventu
 - [x] B3: silnik reguł - operatory `eq`, `neq`, `in`, `contains`, `regex`, `gt`, `gte`, `lt`, `lte`, `exists` w rejestrze; testy jednostkowe
 - [x] B4: handler processora - batch z Kinesis -> parser -> reguły (cache 15 s) -> zapis alertu -> publikacja do AppSync Events. Logika przetestowana lokalnie, na AWS jeszcze niesprawdzona
-- [ ] B5: minimalne API - `GET /alerts` na start feedu
+- [x] B5: API alertów - `GET /alerts` z filtrami i stronicowaniem, szczegóły z runbookiem
 
 ### Blok 2 (3:00-6:30)
-- [ ] B6: CRUD reguł i źródeł; zmiany widoczne w processorze bez restartu
+- [x] B6: CRUD reguł i źródeł z walidacją (operatory, regexy, parser); zmiany widoczne w processorze bez restartu, najpóźniej po 15 s. Do tego presety źródeł i podgląd parsera (`POST /sources/preview`)
 - [x] B7: dedup - fingerprint `sha256(orgId + ruleId + wartości groupBy)`, zapis warunkowy do `cod-dedup`, kolejne eventy tylko podbijają `count`; grupowanie w obrębie batcha przed zapisem
-- [ ] B8: throttling per reguła i per odbiorca - licznik z TTL
-- [ ] B9: notifier - interfejs `NotificationChannel`, implementacje email (SES), SMS (SNS), UI (AppSync); każda próba jako wpis w timeline; błąd -> retry z backoffem -> DLQ -> ponowienie
-- [ ] B10: szablony prezentacji - `title`, `body` i `fields` działają; zostały nadpisania per kanał i deep link w SMS i mailu (razem z notifierem)
+- [x] B8: throttling per reguła i per odbiorca - liczniki z TTL w `cod-counters`, wstrzymane powiadomienie trafia do timeline
+- [x] B9: notifier - interfejs `NotificationChannel`, kanały email (SES), SMS (SNS), UI (AppSync) i symulowany voice; każda próba w timeline; błąd -> 3 próby -> DLQ -> kolejne rundy -> wpis końcowy. Na AWS jeszcze niesprawdzone
+- [x] B10: szablony prezentacji per kanał (`{{pole}}`) + deep link do alertu w SMS i mailu
 - [x] B11: parser logów tekstowych (regex z nazwanymi grupami) dla obu formatów z mocka; custom source to ta sama konfiguracja parsera wypełniona ręcznie
-- [ ] B12: podgląd reguły - `POST /rules/preview` zwraca, ile z ostatnich 100 eventów źródła by złapała (wymaga bufora ostatnich eventów z TTL)
+- [x] B12: podgląd reguły - `POST /rules/preview` zwraca, ile z ostatnich 100 eventów źródła by złapała; próbka ostatnich eventów w `cod-recent-events` (do 5 na sekundę na źródło, TTL 1 h) i `GET /sources/{id}/events`
 
 ### Blok 3 (6:30-8:30)
-- [ ] B13: ack, notatki, odczyt timeline; zmiany statusu publikowane do AppSync
-- [ ] B14: grupy odbiorców - CRUD + rozwijanie grupy w notifierze
-- [ ] B15: runbooki - CRUD w czterech formatach (markdown, link, checklist, tekst) + kilka przykładowych w bibliotece
-- [ ] B16: organizacja - kod zaproszenia, dołączenie, role (`admin`, `team_lead`, `user`), sprawdzanie roli w API
+- [x] B13: ack, resolve, przypisanie, notatki, odczyt timeline; każda zmiana publikowana do AppSync
+- [x] B14: grupy odbiorców - CRUD + rozwijanie grupy przy tworzeniu powiadomień
+- [x] B15: runbooki - CRUD w czterech formatach + cztery przykładowe w `demo/seed/runbooks.json`
+- [x] B16: organizacja - kod zaproszenia, dołączenie, role (`admin`, `team_lead`, `user`) sprawdzane na każdej trasie API
 
 ### Blok 4 (8:30-10:00)
 - [ ] B17: poprawki błędów z testów, sekcja architektury w README

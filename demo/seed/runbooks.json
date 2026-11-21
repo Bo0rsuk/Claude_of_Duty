@@ -1,0 +1,52 @@
+[
+  {
+    "runbookId": "rb-db-timeout",
+    "orgId": "demo",
+    "title": "Database connection timeouts",
+    "format": "checklist",
+    "content": null,
+    "url": null,
+    "items": [
+      "Check the connection pool usage on the service dashboard",
+      "Look for long-running queries on the primary database",
+      "If the pool is exhausted, restart the affected service instances one by one",
+      "If the primary is unresponsive, fail over to the replica",
+      "Note in the alert what was done and resolve it once errors stop"
+    ],
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  },
+  {
+    "runbookId": "rb-escalation",
+    "orgId": "demo",
+    "title": "Critical incident: first response",
+    "format": "markdown",
+    "content": "## First five minutes\n\n1. **Acknowledge** the alert so the team sees someone is on it.\n2. Check whether other services report errors at the same time.\n3. If customers are affected, post in `#incidents`.\n\n## Escalate when\n\n- the cause is not clear after 15 minutes\n- more than one service is down\n\nOn-call lead: see the team calendar.",
+    "url": null,
+    "items": null,
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  },
+  {
+    "runbookId": "rb-wiki",
+    "orgId": "demo",
+    "title": "Edge proxy troubleshooting (wiki)",
+    "format": "link",
+    "content": null,
+    "url": "https://wiki.example.com/platform/edge-proxy-troubleshooting",
+    "items": null,
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  },
+  {
+    "runbookId": "rb-restart",
+    "orgId": "demo",
+    "title": "Restarting a service",
+    "format": "text",
+    "content": "Drain the instance from the load balancer, wait for in-flight requests to finish, restart it and put it back once its health check passes. Never restart more than one instance of a service at a time.",
+    "url": null,
+    "items": null,
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  }
+]

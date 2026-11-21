@@ -59,6 +59,12 @@ locals {
       local.read_write_tables,
       local.publish_events,
       {
+        # The key pair that push messages are signed with.
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter"]
+        Resource = ["arn:aws:ssm:${var.region}:*:parameter${var.push_key_parameter_prefix}/vapid-*"]
+      },
+      {
         # SMS goes to phone numbers, which have no ARN to scope to.
         Effect   = "Allow"
         Action   = ["sns:Publish", "ses:SendEmail"]
@@ -71,9 +77,20 @@ locals {
       local.publish_events,
       local.enqueue_notifications,
       {
+        # The rule assistant's API key and the public key browsers subscribe to push with.
+        # Only the names are known to Terraform; the values are created outside it.
+        Effect = "Allow"
+        Action = ["ssm:GetParameter"]
+        Resource = [
+          "arn:aws:ssm:${var.region}:*:parameter${var.gemini_api_key_parameter}",
+          "arn:aws:ssm:${var.region}:*:parameter${var.push_key_parameter_prefix}/vapid-public-key",
+        ]
+      },
+      {
+        # Records a user's organization in Cognito when they create, join or leave one.
         Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel"]
-        Resource = ["*"]
+        Action   = ["cognito-idp:AdminUpdateUserAttributes"]
+        Resource = [aws_cognito_user_pool.this.arn]
       },
     ]
   }

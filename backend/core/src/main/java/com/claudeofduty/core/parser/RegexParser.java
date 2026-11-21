@@ -19,7 +19,7 @@ final class RegexParser implements Parser {
     }
 
     @Override
-    public List<Map<String, Object>> parse(String payload) {
+    public List<ParsedEvent> parse(String payload) {
         Matcher matcher = pattern.matcher(payload.strip());
         if (!matcher.find()) {
             throw new UnparsablePayloadException("Payload does not match the pattern");
@@ -31,6 +31,6 @@ final class RegexParser implements Parser {
                 fields.put(group, value);
             }
         }
-        return List.of(fields);
+        return List.of(new ParsedEvent(fields, payload));
     }
 }

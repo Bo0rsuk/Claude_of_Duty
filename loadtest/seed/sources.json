@@ -1,0 +1,20 @@
+[
+  {
+    "sourceId": "loadtest-webhook",
+    "orgId": "loadtest",
+    "name": "Load test webhook",
+    "enabled": true,
+    "connector": { "type": "webhook" },
+    "parser": {
+      "format": "json",
+      "split": "alerts",
+      "eventTime": "startsAt",
+      "timeFormat": "iso8601",
+      "level": "labels.severity",
+      "message": "annotations.summary"
+    },
+    "ingestToken": "loadtest-token",
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  }
+]

@@ -16,7 +16,7 @@
   <dependencies>
     <dependency>
       <groupId>com.claudeofduty</groupId>
-      <artifactId>core</artifactId>
+      <artifactId>aws</artifactId>
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>
@@ -26,59 +26,15 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-lambda-java-events</artifactId>
     </dependency>
-
     <!--
-      The SDK's default HTTP clients (Apache, Netty) are excluded: the lightweight
-      URL connection client starts faster, which matters for Lambda cold starts.
+      The SDK logs through SLF4J 1.7. This binding sends its warnings and errors
+      to stderr, which ends up in the function's or the worker's log.
     -->
     <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>url-connection-client</artifactId>
-    </dependency>
-    <!-- SigV4 signing for the AppSync Events HTTP endpoint, which has no SDK client. -->
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>http-auth-aws</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>auth</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>dynamodb-enhanced</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>apache-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>apache5-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>netty-nio-client</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>software.amazon.awssdk</groupId>
-      <artifactId>kinesis</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>apache-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>apache5-client</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>software.amazon.awssdk</groupId>
-          <artifactId>netty-nio-client</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>1.7.36</version>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
 

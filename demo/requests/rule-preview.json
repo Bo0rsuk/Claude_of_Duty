@@ -1,0 +1,10 @@
+{
+  "sourceId": "mock-json-api",
+  "match": {
+    "mode": "all",
+    "conditions": [
+      { "field": "level", "op": "in", "value": ["ERROR", "FATAL"] },
+      { "field": "service", "op": "eq", "value": "payment-api" }
+    ]
+  }
+}

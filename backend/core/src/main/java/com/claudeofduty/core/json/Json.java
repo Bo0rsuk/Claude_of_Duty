@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -60,6 +61,15 @@ public final class Json {
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** Maps a tree or map onto a model type. */
+    public static <T> T convert(Object value, Class<T> type) {
+        return MAPPER.convertValue(value, type);
+    }
+
+    public static ObjectNode object() {
+        return MAPPER.createObjectNode();
     }
 
     public static String timestamp(Instant instant) {

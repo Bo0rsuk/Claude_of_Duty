@@ -90,8 +90,8 @@ The UI pre-fills `routing` when the severity is picked:
 
 | Severity | Default channels |
 |---|---|
-| `CRITICAL` | `sms`, `voice` |
-| `WARNING` | `email` |
+| `CRITICAL` | `sms`, `voice`, `push` |
+| `WARNING` | `email`, `push` |
 | `INFO` | `ui` |
 
 | `channel` | Delivers | Valid targets |
@@ -100,6 +100,7 @@ The UI pre-fills `routing` when the severity is picked:
 | `voice` | Phone call reading the alert title | `group`, `user`, `address` (phone number) |
 | `email` | Email with the alert fields and a link | `group`, `user`, `address` (email) |
 | `ui` | Pop-up in the application with the alert window | `group`, `user` |
+| `push` | System notification on every device where the user enabled push, also when the application is closed | `group`, `user` |
 
 Every alert appears in the organization's live feed regardless of `routing`.
 The `ui` channel adds a pop-up for the targeted people.
@@ -122,7 +123,7 @@ Templates use `{{name}}` placeholders. Unknown names render as an empty string.
 | `{{alertUrl}}` | Link to the alert window in the application |
 
 - `title` and `body` are used in the live feed, the alert window and as the default for every channel.
-- `fields` lists the event fields shown as a table in the alert window and in emails.
+- `fields` lists the event fields shown as a table in the alert window and, as `name: value` lines, in emails without their own template.
 - `channels` optionally overrides the text per channel. SMS and email always end with `{{alertUrl}}`, even when the template omits it.
 
 ## groupBy
@@ -143,8 +144,8 @@ is always created and shown in the live feed.
 
 ## runbookId
 
-Optional reference to a runbook from the library. The alert window and emails
-show the runbook.
+Optional reference to a runbook from the library. The alert window shows the
+runbook; SMS and email link to that window.
 
 ```json
 { "runbookId": "rb-db-timeout", "orgId": "org-1", "title": "Database timeouts",

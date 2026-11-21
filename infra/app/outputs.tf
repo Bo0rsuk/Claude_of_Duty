@@ -44,3 +44,33 @@ output "frontend_env" {
     VITE_EVENTS_REALTIME_ENDPOINT=${local.events_realtime_endpoint}
   EOT
 }
+
+output "ses_dkim_records" {
+  description = "CNAME records to add at the DNS provider of notification_sender_domain. SES verifies the domain once they resolve."
+  value = [
+    for token in try(aws_sesv2_email_identity.sender_domain[0].dkim_signing_attributes[0].tokens, []) : {
+      type  = "CNAME"
+      name  = "${token}._domainkey.${var.notification_sender_domain}"
+      value = "${token}.dkim.amazonses.com"
+    }
+  ]
+}
+
+output "worker_logs_command" {
+  description = "Follows the connector worker's log. Null when the worker is disabled."
+  value = (
+    var.worker_enabled
+    ? "aws ssm start-session --region ${var.region} --target ${aws_instance.worker[0].id} --document-name AWS-StartInteractiveCommand --parameters command='sudo journalctl -u cod-worker -f'"
+    : null
+  )
+}
+
+output "frontend_url" {
+  description = "Public HTTPS address of the web application."
+  value       = local.frontend_url
+}
+
+output "frontend_deploy_command" {
+  description = "Uploads a built frontend (frontend/dist) and makes CloudFront serve it at once. Run from the repository root."
+  value       = "aws s3 sync frontend/dist s3://${aws_s3_bucket.frontend.id} --delete && aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.frontend.id} --paths '/*'"
+}

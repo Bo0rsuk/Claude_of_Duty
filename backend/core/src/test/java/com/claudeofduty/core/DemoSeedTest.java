@@ -12,6 +12,7 @@ import com.claudeofduty.core.model.TimelineEntry;
 import com.claudeofduty.core.parser.EventNormalizer;
 import com.claudeofduty.core.parser.ParserRegistry;
 import com.claudeofduty.core.port.AlertStore;
+import com.claudeofduty.core.port.RecentEvents;
 import com.claudeofduty.core.rules.Operators;
 import com.claudeofduty.core.rules.RuleMatcher;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,10 +37,13 @@ class DemoSeedTest {
         List<Rule> rules = load("rules.json", Rule.class);
         List<Alert> created = new ArrayList<>();
         EventProcessor processor = new EventProcessor(
-                (orgId, sourceId) -> Optional.of(source),
-                (orgId, sourceId) -> rules.stream().filter(rule -> rule.sourceId().equals(sourceId)).toList(),
-                new CollectingStore(created),
-                (type, alert) -> { },
+                new EventProcessor.Ports(
+                        (orgId, sourceId) -> Optional.of(source),
+                        (orgId, sourceId) -> rules.stream().filter(rule -> rule.sourceId().equals(sourceId)).toList(),
+                        new CollectingStore(created),
+                        (type, alert) -> { },
+                        (alert, rule, alertSource) -> { },
+                        RecentEvents.NONE),
                 new EventNormalizer(ParserRegistry.withDefaults()),
                 new RuleMatcher(Operators.withDefaults()),
                 "http://localhost:5173",

@@ -119,6 +119,10 @@ class MockFormatsTest {
 
         assertEquals(Level.ERROR, events.get(1).level());
         assertEquals("monitoring-2", events.get(1).fields().get("labels.instance"));
+
+        // Each event keeps its own element as raw text, not the payload it shared with the other alert.
+        assertTrue(first.raw().contains("SLOW_QUERY"));
+        assertFalse(first.raw().contains("DB_TIMEOUT"));
     }
 
     @Test
