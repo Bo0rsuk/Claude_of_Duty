@@ -34,7 +34,7 @@ export function MessagePreview() {
       <div className="preview-block">
         <small>{view} preview</small>
         <h4>
-          {view === "Email" ? "Subject · " : view === "SMS" ? "FANS · " : ""}
+          {view === "Email" ? "Subject · " : view === "SMS" ? "Squawk · " : ""}
           {title}
         </h4>
         <p>

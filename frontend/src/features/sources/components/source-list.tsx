@@ -1,6 +1,7 @@
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
+import { StatusTag } from "#components/status-tag.tsx";
 import { SourceWizard } from "#features/sources/components/source-wizard.tsx";
 import { useWorkspaceContext } from "#features/workspace";
 import { relative } from "#lib/time.ts";
@@ -48,7 +49,7 @@ export function SourceList() {
               </small>
               <small>Last event {relative(s.last)}</small>
             </span>
-            <span className="healthy">Receiving</span>
+            <StatusTag value="Receiving" tone="positive" />
           </button>
         ))}
       </div>

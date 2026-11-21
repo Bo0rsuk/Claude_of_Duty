@@ -1,4 +1,4 @@
-# FANS
+# Squawk
 
 Lokalny prototyp operacyjnej platformy alertów w React, TypeScript i Vite. Interfejs jest po angielsku. Do demonstracji wystarcza przeglądarka.
 
@@ -43,4 +43,4 @@ W otwartym feedzie lokalny timer co minutę sygnalizuje nowe alerty. Pojawiają 
 
 Jedna firma i jeden roboczy kontekst operacyjny. Wybrany rekord steruje powiązanymi widgetami również po zmianie ich kolejności. Szeroka kanwa mieści kolejkę i inspektor obok siebie. Przy ograniczonym miejscu szczegóły mają własny widok z powrotem do listy.
 
-Paleta FANS korzysta z jasnego motywu STAGEUI. Kamiennoszara rama otacza białą przestrzeń roboczą. Asta Sans służy do tekstu i kontrolek, a Lora do tytułów i liczb. Błękit wyróżnia zaznaczenie, fokus i aktywność. Ikony oraz etykiety wskazują ważność alertów.
+Paleta Squawk korzysta z jasnego motywu STAGEUI. Kamiennoszara rama otacza białą przestrzeń roboczą. Asta Sans służy do tekstu i kontrolek, a Lora do tytułów i liczb. Błękit wyróżnia zaznaczenie, fokus i aktywność. Ikony oraz etykiety wskazują ważność alertów.

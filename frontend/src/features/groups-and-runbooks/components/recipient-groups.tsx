@@ -3,6 +3,7 @@ import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
 import { Save } from "#components/save.tsx";
+import { StatusTag } from "#components/status-tag.tsx";
 import { homeTeam, useWorkspaceContext } from "#features/workspace";
 import { unique } from "#lib/id.ts";
 import { Layers, Plus, Users } from "lucide-react";
@@ -120,7 +121,7 @@ export function GroupMembers() {
                     {m.email} · {m.phone}
                   </small>
                 </span>
-                {m.duty && <span className="healthy">On call</span>}
+                {m.duty && <StatusTag value="On call" />}
               </label>
             ))}
         </>

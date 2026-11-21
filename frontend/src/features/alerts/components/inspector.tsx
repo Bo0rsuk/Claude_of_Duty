@@ -29,7 +29,10 @@ export function Inspector() {
       </header>
       <div className="inspection-heading">
         <div className="detail-tags">
-          <Badge severity={a.severity as Severity} />
+          <Badge
+            severity={a.severity as Severity}
+            resolved={a.status === "Resolved"}
+          />
           <StatusTag value={a.status} />
         </div>
         <h2>{a.title}</h2>
