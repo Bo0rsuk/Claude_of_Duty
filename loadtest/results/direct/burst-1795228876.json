@@ -1,0 +1,42 @@
+{
+  "run_id": "burst-1795228876",
+  "started_at": "2026-11-21T02:41:41+00:00",
+  "scenario": "burst",
+  "settings": {
+    "ingest_route": "direct",
+    "target_rate_events_per_s": 1000.0,
+    "duration_s": 20.0,
+    "events_per_request": 5,
+    "warmup_s": 5.0
+  },
+  "ingest": {
+    "events_sent": 20000,
+    "events_accepted": 20000,
+    "http_statuses": {
+      "202": 4000
+    },
+    "achieved_rate_events_per_s": 998.4,
+    "accepted_rate_events_per_s": 998.4
+  },
+  "latency": {
+    "http_round_trip": {
+      "samples": 4000,
+      "min_ms": 29.1,
+      "p50_ms": 37.1,
+      "p90_ms": 103.9,
+      "p99_ms": 131.1,
+      "max_ms": 193.1,
+      "mean_ms": 51.5
+    }
+  },
+  "live_feed_caught_up": true,
+  "deduplication": {
+    "events_accepted": 25000,
+    "alerts_created": 1,
+    "final_count": 25000,
+    "all_events_counted": true,
+    "first_event_to_alert_ms": 346.9,
+    "last_event_to_final_count_ms": 141.6,
+    "live_feed_messages": 978
+  }
+}

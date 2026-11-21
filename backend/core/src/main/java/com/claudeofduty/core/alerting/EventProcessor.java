@@ -146,21 +146,18 @@ public final class EventProcessor {
     private boolean store(String fingerprint, Group group) {
         Instant now = clock.instant();
         String candidateId = AlertFactory.newAlertId(now);
-        String activeId = ports.alerts().claim(group.rule.orgId(), fingerprint, candidateId);
+        String alertId = ports.alerts().claim(group.rule.orgId(), fingerprint, candidateId);
+        boolean claimedByThisBatch = alertId.equals(candidateId);
 
-        if (!activeId.equals(candidateId)) {
-            Optional<Alert> updated = ports.alerts().addEvents(group.rule.orgId(), activeId, group.count, group.lastSeenAt);
-            if (updated.isPresent()) {
-                ports.publisher().publish(AlertPublisher.UPDATED, updated.get());
-                return false;
-            }
-            // The fingerprint was claimed but the alert never got written, e.g. the
-            // function was interrupted in between. Create it now under the claimed id.
+        // The same write for both cases. Whoever claimed the fingerprint may not have
+        // stored the alert yet when another batch arrives with more of its events.
+        Alert alert = ports.alerts().addEvents(factory.create(
+                alertId, fingerprint, group.rule, group.source, group.first, group.count, group.lastSeenAt, now));
+
+        if (!claimedByThisBatch) {
+            ports.publisher().publish(AlertPublisher.UPDATED, alert);
+            return false;
         }
-
-        Alert alert = factory.create(
-                activeId, fingerprint, group.rule, group.source, group.first, group.count, group.lastSeenAt, now);
-        ports.alerts().create(alert);
         ports.alerts().appendTimeline(Timeline.entry(alert.alertId(), TimelineEntry.Type.CREATED, TimelineEntry.Actor.system(),
                 Map.of("ruleName", alert.ruleName(), "severity", alert.severity().name()), now));
         ports.publisher().publish(AlertPublisher.CREATED, alert);

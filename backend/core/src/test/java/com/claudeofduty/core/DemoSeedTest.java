@@ -82,13 +82,9 @@ class DemoSeedTest {
         }
 
         @Override
-        public void create(Alert alert) {
+        public Alert addEvents(Alert alert) {
             created.add(alert);
-        }
-
-        @Override
-        public Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
-            return Optional.empty();
+            return alert;
         }
 
         @Override

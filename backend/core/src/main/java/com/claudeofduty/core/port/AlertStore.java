@@ -2,8 +2,6 @@ package com.claudeofduty.core.port;
 
 import com.claudeofduty.core.model.Alert;
 import com.claudeofduty.core.model.TimelineEntry;
-import java.time.Instant;
-import java.util.Optional;
 
 public interface AlertStore {
 
@@ -16,14 +14,18 @@ public interface AlertStore {
      */
     String claim(String orgId, String fingerprint, String candidateAlertId);
 
-    void create(Alert alert);
-
     /**
-     * Adds further matching events to an existing alert.
+     * Adds events to an alert, creating the alert if it does not exist yet.
      *
-     * @return the updated alert, or empty when no alert with that id exists
+     * Two processors can reach this for the same alert at the same moment: the one
+     * that claimed the fingerprint and another that found the claim. So this must be
+     * one atomic write that neither overwrites what the other stored nor loses a count:
+     * {@code alert.count()} is added to the stored count, and the other fields are
+     * written only if the alert is new.
+     *
+     * @return the alert as stored after the write
      */
-    Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt);
+    Alert addEvents(Alert alert);
 
     void appendTimeline(TimelineEntry entry);
 }

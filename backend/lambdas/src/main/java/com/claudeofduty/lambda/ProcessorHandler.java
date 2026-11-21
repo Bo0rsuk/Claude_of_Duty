@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.KinesisEvent;
 import com.claudeofduty.core.alerting.EventProcessor;
+import com.claudeofduty.core.ingest.WebhookIntake;
 import com.claudeofduty.core.json.Json;
 import com.claudeofduty.core.model.RawRecord;
 import com.claudeofduty.core.model.RecipientGroup;
@@ -28,6 +29,7 @@ import com.claudeofduty.aws.DynamoSourceLookup;
 import com.claudeofduty.aws.DynamoThrottle;
 import com.claudeofduty.aws.SqsNotificationQueue;
 import com.claudeofduty.aws.Tables;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -52,28 +54,40 @@ public class ProcessorHandler implements RequestHandler<KinesisEvent, Void> {
     private static final String PRIMING = "priming";
 
     private final EventProcessor processor;
+    private final WebhookIntake intake;
 
     public ProcessorHandler() {
-        this(defaultProcessor());
+        this(defaultProcessor(), new WebhookIntake(new DynamoSourceLookup(AwsClients.dynamoDb())));
         // Runs the whole pipeline once on a record of an unknown source, which is parsed and then skipped.
         Priming.run(() -> processor.process(
                 List.of(new RawRecord(PRIMING, PRIMING, PRIMING, Clock.systemUTC().instant(), "{}"))));
     }
 
-    ProcessorHandler(EventProcessor processor) {
+    ProcessorHandler(EventProcessor processor, WebhookIntake intake) {
         this.processor = processor;
+        this.intake = intake;
     }
 
     @Override
     public Void handleRequest(KinesisEvent event, Context context) {
         List<RawRecord> records = new ArrayList<>(event.getRecords().size());
+        int[] refused = {0};
         for (KinesisEvent.KinesisEventRecord record : event.getRecords()) {
             String json = StandardCharsets.UTF_8.decode(record.getKinesis().getData()).toString();
             try {
-                records.add(Json.read(json, RawRecord.class));
-            } catch (UncheckedIOException e) {
+                JsonNode node = Json.tree(json);
+                if (WebhookIntake.isEnvelope(node)) {
+                    // Written by API Gateway directly, so nothing has checked the sender yet.
+                    intake.open(node).ifPresentOrElse(records::add, () -> refused[0]++);
+                } else {
+                    records.add(Json.convert(node, RawRecord.class));
+                }
+            } catch (UncheckedIOException | IllegalArgumentException e) {
                 context.getLogger().log("Skipping a stream record that is not a RawRecord: " + e.getMessage());
             }
+        }
+        if (refused[0] > 0) {
+            context.getLogger().log("Dropped " + refused[0] + " webhook payloads with an unknown source or a wrong token");
         }
         context.getLogger().log("Processed batch: " + processor.process(records));
         return null;

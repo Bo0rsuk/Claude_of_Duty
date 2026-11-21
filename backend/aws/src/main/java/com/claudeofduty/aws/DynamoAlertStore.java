@@ -1,17 +1,16 @@
 package com.claudeofduty.aws;
 
 import com.claudeofduty.core.api.Page;
-import com.claudeofduty.core.json.Json;
 import com.claudeofduty.core.model.Alert;
 import com.claudeofduty.core.model.TimelineEntry;
 import com.claudeofduty.core.port.AlertRepository;
 import com.claudeofduty.core.port.AlertStore;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
@@ -24,6 +23,10 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 
 /** Alerts, their timeline and the deduplication pointers in DynamoDB. */
 public final class DynamoAlertStore implements AlertStore, AlertRepository {
+
+    private static final Set<String> KEY_FIELDS = Set.of("orgId", "alertId");
+    private static final String COUNT = "count";
+    private static final String LAST_SEEN_AT = "lastSeenAt";
 
     private final DynamoDbClient dynamoDb;
 
@@ -49,29 +52,38 @@ public final class DynamoAlertStore implements AlertStore, AlertRepository {
         }
     }
 
+    /**
+     * One UpdateItem: the count is added atomically, and every other field is set
+     * only if it is not there yet. Concurrent writers for the same alert therefore
+     * end up with one alert and the sum of their counts, whatever order they arrive in.
+     */
     @Override
-    public void create(Alert alert) {
-        dynamoDb.putItem(request -> request.tableName(Tables.ALERTS).item(ItemCodec.toItem(alert)));
-    }
+    public Alert addEvents(Alert alert) {
+        Map<String, String> names = new HashMap<>();
+        Map<String, AttributeValue> values = new HashMap<>();
+        List<String> assignments = new ArrayList<>();
+        ItemCodec.toItem(alert).forEach((field, value) -> {
+            if (KEY_FIELDS.contains(field) || field.equals(COUNT)) {
+                return;
+            }
+            int index = assignments.size();
+            names.put("#f" + index, field);
+            values.put(":v" + index, value);
+            assignments.add(field.equals(LAST_SEEN_AT)
+                    ? "#f" + index + " = :v" + index
+                    : "#f" + index + " = if_not_exists(#f" + index + ", :v" + index + ")");
+        });
+        names.put("#count", COUNT);
+        values.put(":count", AttributeValue.fromN(Long.toString(alert.count())));
 
-    /** An atomic counter update, so concurrent batches never lose events. */
-    @Override
-    public Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
-        try {
-            UpdateItemResponse response = dynamoDb.updateItem(request -> request
-                    .tableName(Tables.ALERTS)
-                    .key(alertKey(orgId, alertId))
-                    .updateExpression("SET lastSeenAt = :lastSeenAt ADD #count :count")
-                    .conditionExpression("attribute_exists(alertId)")
-                    .expressionAttributeNames(Map.of("#count", "count"))
-                    .expressionAttributeValues(Map.of(
-                            ":lastSeenAt", AttributeValue.fromS(Json.timestamp(lastSeenAt)),
-                            ":count", AttributeValue.fromN(Long.toString(count))))
-                    .returnValues(ReturnValue.ALL_NEW));
-            return Optional.of(ItemCodec.fromItem(response.attributes(), Alert.class));
-        } catch (ConditionalCheckFailedException noSuchAlert) {
-            return Optional.empty();
-        }
+        UpdateItemResponse response = dynamoDb.updateItem(request -> request
+                .tableName(Tables.ALERTS)
+                .key(alertKey(alert.orgId(), alert.alertId()))
+                .updateExpression("SET " + String.join(", ", assignments) + " ADD #count :count")
+                .expressionAttributeNames(names)
+                .expressionAttributeValues(values)
+                .returnValues(ReturnValue.ALL_NEW));
+        return ItemCodec.fromItem(response.attributes(), Alert.class);
     }
 
     @Override

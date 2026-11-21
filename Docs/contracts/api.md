@@ -102,11 +102,18 @@ The action endpoints return the updated alert and publish `alert.updated`.
 
 | Method and path | Purpose |
 |---|---|
-| `POST /ingest/{orgId}/{sourceId}?token={ingestToken}` | Push one payload from a webhook source |
+| `POST {ingest url}/ingest/{orgId}/{sourceId}?token={ingestToken}` | Push one payload from a webhook source |
 
 - No JWT. The token may also be sent as the `X-Ingest-Token` header.
-- The body is stored untouched as one `RawRecord`, whatever its content type.
-- Returns `202 { "recordId": "..." }`. An unknown or disabled source or a wrong token returns 404.
+- The body is stored untouched as one record, whatever its content type.
+- Returns `202 { "recordId": "..." }`.
+
+There are two ingest URLs with the same path:
+
+| Route | URL | Wrong token or unknown source |
+|---|---|---|
+| Direct (default) | `ingest_base_url` output, `VITE_INGEST_URL` | Still `202`. API Gateway writes to the stream without running any code, and the processor drops the payload when it reads it. |
+| Through the ingest function | `api_url` output | `404` at once. Shares the account's Lambda concurrency, so it is throttled first under load. |
 
 ## Real-time channels
 
