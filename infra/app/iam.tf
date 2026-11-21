@@ -87,9 +87,10 @@ locals {
         ]
       },
       {
-        # Records a user's organization in Cognito when they create, join or leave one.
+        # Records a user's organization in Cognito when they create, join or leave one,
+        # and creates the account of a person an admin adds by email.
         Effect   = "Allow"
-        Action   = ["cognito-idp:AdminUpdateUserAttributes"]
+        Action   = ["cognito-idp:AdminUpdateUserAttributes", "cognito-idp:AdminCreateUser"]
         Resource = [aws_cognito_user_pool.this.arn]
       },
     ]

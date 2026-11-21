@@ -2,6 +2,7 @@ import { Badge } from "#components/badge.tsx";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
+import { Modal } from "#components/modal.tsx";
 import { newRule, useWorkspaceContext } from "#features/workspace";
 import { GitBranch, Plus } from "lucide-react";
 import { useState } from "react";
@@ -14,8 +15,18 @@ export function RuleList() {
       sourceFilter,
       setSourceFilter,
       setCompactDetail,
+      account,
     } = useWorkspaceContext(),
-    [q, setQ] = useState("");
+    [q, setQ] = useState(""),
+    // The move to another rule that waits for the person to decide about unsaved edits.
+    [discard, setDiscard] = useState<null | (() => void)>(null);
+  function leaving(move: () => void) {
+    const saved = data.rules.find((r) => r.id === rule.id);
+    // A blank draft holds nothing worth asking about.
+    const edited = saved ? JSON.stringify(saved) !== JSON.stringify(rule) : Boolean(rule.name.trim() || rule.conditions.trim());
+    if (edited) setDiscard(() => move);
+    else move();
+  }
   const rows = data.rules.filter(
     (r) =>
       r.name.toLowerCase().includes(q.toLowerCase()) &&
@@ -27,10 +38,12 @@ export function RuleList() {
       icon={GitBranch}
       extra={
         <button
-          onClick={() => {
-            setRule(newRule());
-            setCompactDetail(true);
-          }}
+          onClick={() =>
+            leaving(() => {
+              setRule(newRule(account ? data : undefined));
+              setCompactDetail(true);
+            })
+          }
         >
           <Plus />
           Draft rule
@@ -62,14 +75,18 @@ export function RuleList() {
             key={r.id}
             aria-pressed={r.id === rule.id}
             onClick={() => {
-              setRule(r);
-              setCompactDetail(true);
+              if (r.id === rule.id) return setCompactDetail(true);
+              leaving(() => {
+                setRule(r);
+                setCompactDetail(true);
+              });
             }}
           >
             <span>
               <strong>{r.name}</strong>
               <small>{r.source}</small>
             </span>
+            {r.enabled === false && <span className="draft">Off</span>}
             <Badge severity={r.severity} />
           </button>
         ))}
@@ -88,6 +105,23 @@ export function RuleList() {
             </button>
           }
         />
+      )}
+      {discard && (
+        <Modal title="Discard unsaved changes?" onClose={() => setDiscard(null)}>
+          <p>“{rule.name || "The draft rule"}” has edits that are not saved. Opening another rule discards them.</p>
+          <div className="buttons">
+            <button onClick={() => setDiscard(null)}>Keep editing</button>
+            <button
+              className="danger-btn"
+              onClick={() => {
+                discard();
+                setDiscard(null);
+              }}
+            >
+              Discard changes
+            </button>
+          </div>
+        </Modal>
       )}
     </Box>
   );

@@ -51,7 +51,7 @@ export function UserList() {
   );
 }
 export function ManageUser() {
-  const { data, role, memberId, commit } = useWorkspaceContext(),
+  const { data, role, memberId, commit, account } = useWorkspaceContext(),
     m = data.members.find(
       (m) => m.id === memberId && (role === "Admin" || m.team === homeTeam),
     );
@@ -99,13 +99,22 @@ export function ManageUser() {
               />
             </Field>
             <Field label="Phone">
-              <input type="tel" name="phone" defaultValue={m.phone} />
+              <input
+                type="tel"
+                name="phone"
+                defaultValue={m.phone}
+                placeholder="+48600100200"
+                // SMS and calls need the international form. Empty is allowed.
+                pattern="\\+[0-9]{8,15}"
+                title="International form without spaces, for example +48600100200"
+              />
             </Field>
             {!locked && (
               <Field label="Assigned role">
                 <select name="role" defaultValue={m.role}>
                   {[
-                    "Pending",
+                    // "Waiting for a role" exists in the demo only.
+                    ...(account ? [] : ["Pending"]),
                     ...roles.filter((r) => role === "Admin" || r !== "Admin"),
                   ].map((r) => (
                     <option key={r}>{r}</option>

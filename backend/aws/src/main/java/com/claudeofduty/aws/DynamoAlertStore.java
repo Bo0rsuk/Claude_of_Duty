@@ -145,6 +145,18 @@ public final class DynamoAlertStore implements AlertStore, AlertRepository {
     }
 
     @Override
+    public void delete(String orgId, String alertId) {
+        for (TimelineEntry entry : timeline(alertId)) {
+            dynamoDb.deleteItem(request -> request
+                    .tableName(Tables.ALERT_TIMELINE)
+                    .key(Map.of(
+                            "alertId", AttributeValue.fromS(alertId),
+                            "entryId", AttributeValue.fromS(entry.entryId()))));
+        }
+        dynamoDb.deleteItem(request -> request.tableName(Tables.ALERTS).key(alertKey(orgId, alertId)));
+    }
+
+    @Override
     public List<TimelineEntry> timeline(String alertId) {
         return dynamoDb.queryPaginator(request -> request
                         .tableName(Tables.ALERT_TIMELINE)

@@ -114,7 +114,7 @@ This creates one EC2 instance with an Elastic IP in its own small VPC. The
 `endpoints` output lists the URLs. The instance needs about three minutes after
 `apply` to install Docker and start the containers.
 
-- **Domain:** the mocks are served at `https://datasource.waw-out.pl` (`domain_name` in `terraform.tfvars`). With `route53_zone_id` set, Terraform creates the DNS record. Otherwise add the A record shown in the `dns_record` output at the registrar. HTTPS starts working once the record resolves.
+- **Domain:** the mocks are served at `https://datasource.squawk.com.pl` (`domain_name` in `terraform.tfvars`). With `route53_zone_id` set, Terraform creates the DNS record. Otherwise add the A records shown in the `dns_records` output at the registrar. HTTPS starts working once the record resolves.
 - **Settings:** region, domain, instance size, event rate and webhook URL live in `infra/datasource/terraform.tfvars`.
 - **Updating the mocks:** the files in this directory are shipped through cloud-init, so after a change `terraform apply` replaces the instance. The IP and the hostname stay the same.
 - **Certificates:** every replacement requests a new TLS certificate, and Let's Encrypt issues at most 5 per week for the same hostname. Iterate locally and deploy finished versions.

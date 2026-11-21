@@ -7,6 +7,8 @@ public interface AlertPublisher {
 
     String CREATED = "alert.created";
     String UPDATED = "alert.updated";
+    /** The alert was deleted by a person. Clients drop their copy. */
+    String DELETED = "alert.deleted";
 
     void publish(String type, Alert alert);
 }

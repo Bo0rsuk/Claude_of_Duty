@@ -119,6 +119,6 @@ class RuleMatcherTest {
 
     private static Rule rule(MatchMode mode, List<Condition> conditions) {
         return new Rule("rule-1", "org-1", "src-1", "Test rule", true, new Match(mode, conditions),
-                null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null);
     }
 }

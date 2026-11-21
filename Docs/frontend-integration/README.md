@@ -3,6 +3,10 @@
 Everything the web application needs to talk to the backend. The backend is
 deployed and all endpoints named here are live.
 
+The application in `frontend/` follows this guide; its client code is in
+`frontend/src/services/backend/`. It signs in with plain `fetch` calls to
+Cognito instead of Amplify, so sections 2 and 3 show the Amplify equivalent.
+
 | File | Use |
 |---|---|
 | [types.ts](types.ts) | TypeScript shapes of all requests, responses and real-time messages. Copy into the app. |
@@ -157,7 +161,8 @@ export function useAlerts(orgId: string) {
 ```
 
 - A subscription is accepted only for the user's own organization, and only with the ID token. A refused one arrives in `onError` as `subscribe_error` with the type `Unauthorized`: the token is stale, see section 4.
-- `alert.created` is a new alert. `alert.updated` means its count, status or assignee changed, or a note was added.
+- `alert.created` is a new alert. `alert.updated` means its count, status, assignee or ticked runbook steps changed, or a note was added. `alert.deleted` means a team lead deleted it: drop it from the list instead of adding it.
+- The `useAlerts` example above treats every message as an update. Check `type` first once alerts can be deleted.
 - The client reconnects by itself. After a reconnect, reload `GET /alerts`, because messages sent while offline are not replayed. `onStatus(true)` is the moment to do it.
 - An open alert window should reload its timeline when an update for its alert arrives.
 - A burst of identical events sends many `alert.updated` messages for one alert, each with a higher `count`. Rendering must cope with several per second.
@@ -185,6 +190,8 @@ leaves open which token it sends and the exact shape of received messages.
 | Pass to a colleague | `POST /alerts/{alertId}/assign` `{ "userId" }`, pick from `GET /members` |
 | Comment | `POST /alerts/{alertId}/notes` `{ "text" }` |
 | Notify everyone again | `POST /alerts/{alertId}/resend` (team lead), ignores the rule's throttling |
+| Tick a runbook step | `PUT /alerts/{alertId}/runbook-steps` `{ "checked": [0, 2] }`, the whole list each time |
+| Delete | `DELETE /alerts/{alertId}` (team lead), also removes the timeline |
 
 Each action returns the updated alert. A link of the form
 `<app url>/alerts/{alertId}` is what SMS and email contain, so the app needs
@@ -233,10 +240,11 @@ Plain create, read, update, delete: see [../contracts/api.md](../contracts/api.m
 `infra/app` creates an S3 bucket behind CloudFront for the built application:
 
 ```bash
-npm run build
-$(terraform -chdir=infra/app output -raw frontend_deploy_command)
-terraform -chdir=infra/app output frontend_url
+scripts/deploy-frontend.sh
 ```
+
+The script writes `frontend/.env` from the Terraform outputs, builds the
+application, syncs `dist` to the bucket and invalidates the CloudFront cache.
 
 Unknown paths are answered with `index.html`, so client-side routes such as
 `/alerts/{alertId}` work on reload.

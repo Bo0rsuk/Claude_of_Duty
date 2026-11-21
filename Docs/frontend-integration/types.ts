@@ -59,7 +59,7 @@ export type Connector =
   | { type: 'kafka'; bootstrapServers: string; topic: string; groupId?: string };
 
 export type ParserConfig = {
-  format: 'json' | 'regex';
+  format: 'json' | 'regex' | 'kv';
   /** regex only: Java regular expression with named groups (letters and digits in names). */
   pattern?: string | null;
   /** json only: path to an array whose elements become separate events. */
@@ -137,6 +137,13 @@ export type Presentation = {
 
 export type Limit = { max: number; windowSeconds: number };
 
+export type Delivery = {
+  /** Times of day as "HH:mm" in an IANA time zone (UTC when absent). `to` before `from` runs over midnight. */
+  window: { from: string; to: string; timezone?: string | null };
+  /** The channel everyone is notified on outside the window, or null to send nothing then. */
+  outsideWindow: Channel | null;
+};
+
 export type Rule = {
   ruleId: string;
   orgId: string;
@@ -150,6 +157,8 @@ export type Rule = {
   /** Events with the same values of these fields are grouped into one alert. */
   groupBy: string[];
   throttle: { perRule?: Limit | null; perRecipient?: Limit | null } | null;
+  /** When the routing applies. Absent or null means at any hour. */
+  delivery?: Delivery | null;
   runbookId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -234,6 +243,8 @@ export type Alert = {
   resolvedBy: string | null;
   resolvedAt: string | null;
   timing: { receivedAt: string; processedAt: string };
+  /** Positions of the runbook checklist steps ticked off for this alert, from 0. */
+  checkedSteps?: number[] | null;
 };
 
 /** GET /alerts/{alertId} */
@@ -276,7 +287,8 @@ export type PushMessage = { title: string; body: string; alertId: string; severi
 
 /** Messages on the channel /alerts/{orgId}. An update carries the whole alert: replace your copy. */
 export type AlertMessage = {
-  type: 'alert.created' | 'alert.updated';
+  /** After 'alert.deleted' drop the alert instead of adding it. */
+  type: 'alert.created' | 'alert.updated' | 'alert.deleted';
   alert: Alert;
   publishedAt: string;
 };

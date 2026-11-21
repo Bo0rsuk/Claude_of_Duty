@@ -1,3 +1,4 @@
+import { plural } from "#lib/plural.ts";
 import { Box } from "#components/box.tsx";
 import { Empty } from "#components/empty.tsx";
 import { Field } from "#components/field.tsx";
@@ -44,11 +45,11 @@ export function SourceList() {
               <strong>{s.id}</strong>
               <small>
                 {s.type} · {s.format} ·{" "}
-                {data.rules.filter((r) => r.source === s.id).length} rules
+                {plural(data.rules.filter((r) => r.source === s.id).length, "rule")}
               </small>
               <small>Last event {relative(s.last)}</small>
             </span>
-            <span className="healthy">Receiving</span>
+            <span className={s.enabled === false ? "draft" : "healthy"}>{s.enabled === false ? "Off" : "Receiving"}</span>
           </button>
         ))}
       </div>

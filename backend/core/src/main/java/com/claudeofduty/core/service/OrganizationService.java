@@ -61,10 +61,11 @@ public final class OrganizationService {
     /** Name and phone are what notifications use to reach the user. */
     public Profile updateProfile(Caller caller, String name, String phone) {
         caller.orgId();
+        requirePhone(phone);
         Member current = caller.member();
         Member updated = new Member(current.orgId(), current.userId(), current.role(),
                 name != null ? name : current.name(), current.email(),
-                phone != null ? phone : current.phone(), current.joinedAt());
+                phone == null ? current.phone() : phone.isBlank() ? null : phone.strip(), current.joinedAt());
         membership.saveMember(updated);
         return profile(new Caller(caller.userId(), caller.email(), updated, caller.tokenOrgId()));
     }
@@ -112,18 +113,50 @@ public final class OrganizationService {
         return membership.members(caller.orgId());
     }
 
-    public Member changeRole(Caller caller, String userId, Role role) {
-        if (role == null) {
-            throw ApiException.invalid("role must be one of user, team_lead, admin");
+    /**
+     * An admin adds a person by email. The account is created for them, already
+     * in this organization, and they receive a temporary password by email.
+     */
+    public Member invite(Caller caller, String email, String name, Role role) {
+        String orgId = caller.orgId();
+        String address = email == null ? "" : email.strip().toLowerCase();
+        if (!address.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
+            throw ApiException.invalid("email must be an email address");
         }
+        if (membership.members(orgId).stream().anyMatch(member -> address.equalsIgnoreCase(member.email()))) {
+            throw ApiException.conflict(address + " is already a member");
+        }
+        String userId = users.createUser(address, orgId);
+        Member member = new Member(orgId, userId, role == null ? Role.USER : role,
+                name == null || name.isBlank() ? null : name.strip(), address, null, clock.instant());
+        membership.saveMember(member);
+        return member;
+    }
+
+    /**
+     * An admin changes a member's role, name or phone. A part that is null stays as it is;
+     * a blank phone removes the number.
+     */
+    public Member updateMember(Caller caller, String userId, Role role, String name, String phone) {
+        if (role == null && name == null && phone == null) {
+            throw ApiException.invalid("Send a role (user, team_lead or admin), a name or a phone to change");
+        }
+        requirePhone(phone);
         Member member = requireMember(caller, userId);
-        if (member.role() == Role.ADMIN && role != Role.ADMIN) {
+        if (role != null && member.role() == Role.ADMIN && role != Role.ADMIN) {
             requireAnotherAdmin(caller, userId);
         }
-        Member updated = new Member(member.orgId(), member.userId(), role, member.name(), member.email(),
-                member.phone(), member.joinedAt());
+        Member updated = new Member(member.orgId(), member.userId(), role != null ? role : member.role(),
+                name == null ? member.name() : name.isBlank() ? null : name.strip(), member.email(),
+                phone == null ? member.phone() : phone.isBlank() ? null : phone.strip(), member.joinedAt());
         membership.saveMember(updated);
         return updated;
+    }
+
+    private static void requirePhone(String phone) {
+        if (phone != null && !phone.isBlank() && !phone.strip().matches("\\+[0-9]{8,15}")) {
+            throw ApiException.invalid("phone must be in the international form, for example +48600100200");
+        }
     }
 
     public void remove(Caller caller, String userId) {

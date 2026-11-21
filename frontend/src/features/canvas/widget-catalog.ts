@@ -32,6 +32,8 @@ interface Widget {
   view: ComponentType;
   placement: Placement;
   boxed?: boolean;
+  /** Exists only on the demo's made-up data; left out for a signed-in team. */
+  demoOnly?: boolean;
 }
 const widget = (
   panel: Panel,
@@ -73,7 +75,8 @@ export const registry: Record<string, Widget> = {
   user: widget("Users", "Member details", ManageUser),
   assign: widget("Users", "Assigned rules", AssignRules),
   legend: widget("Users", "Role permissions", RolesLegend, "list"),
-  teams: widget("Admin", "Teams", TeamList, "list"),
+  // A company on the backend is one team, so a list of teams has nothing to show.
+  teams: { ...widget("Admin", "Teams", TeamList, "list"), demoOnly: true },
   team: widget("Admin", "Team settings", ManageTeam),
   code: widget("Admin", "Team code", TeamCode),
   accounts: widget("Admin", "All accounts", AccountList, "list"),

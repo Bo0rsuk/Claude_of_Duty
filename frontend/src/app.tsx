@@ -1,3 +1,4 @@
+import { useCriticalSignal } from "#features/alerts/services/critical-signal.ts";
 import { Modal } from "#components/modal.tsx";
 import { Canvas } from "#features/canvas";
 import {
@@ -33,7 +34,7 @@ const titles: Record<Panel, string> = {
 const descriptions: Record<Exclude<Panel, "Alerts">, string> = {
   Custom: "Arrange the tools you use across your workspace.",
   Rules: "Define which events reach your team and how they arrive.",
-  Sources: "Inspect incoming events and connect demo sources.",
+  Sources: "See what each source sends and connect new ones.",
   "Groups & runbooks": "Organize recipients and the instructions they follow.",
   Users: "Manage team membership, roles and assigned rules.",
   Admin: "Manage company teams, accounts and join codes.",
@@ -55,16 +56,20 @@ export function App() {
     setMemberId,
     setCompactDetail,
     rule,
+    account: person,
   } = useWorkspaceContext();
   const [collapsed, setCollapsed] = useLocal("fans:collapsed", () => false),
     [drawer, setDrawer] = useState(false),
     [editing, setEditing] = useState(false),
     [account, setAccount] = useState(false),
-    [access, setAccess] = useState("Assigned"),
+    [demoAccess, setAccess] = useState("Assigned"),
     [leave, setLeave] = useState<null | (() => void)>(null);
   const main = useRef<HTMLElement>(null);
-  const user =
-    access === "Assigned"
+  // Signed-in people are in a team or about to join one; the demo switches between made-up states.
+  const access = person ? (person.hasTeam ? "Assigned" : "Unassigned") : demoAccess;
+  const user = person
+    ? person.name
+    : access === "Assigned"
       ? role === "Admin"
         ? "Alex Morgan"
         : role === "Team lead"
@@ -106,9 +111,7 @@ export function App() {
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, [role]);
-  useEffect(() => {
-    document.title = titles[panel] + " · FANS";
-  }, [panel]);
+  useCriticalSignal(data.alerts, titles[panel] + " · Squawk");
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), 8000);
@@ -142,6 +145,10 @@ export function App() {
     />
   );
   function changeAccess(v: string) {
+    if (person) {
+      if (v === "Signed out") person.signOut();
+      return;
+    }
     setAccess(v);
     setEditing(false);
     setPrototype(false);
@@ -197,7 +204,7 @@ export function App() {
               <PanelLeft aria-hidden="true" />
             </button>
             <span className="crumb-workspace">Workspace</span>
-            <span className="compact-wordmark">FANS</span>
+            <span className="compact-wordmark">Squawk</span>
             <ChevronRight />
             <strong>{access === "Assigned" ? panel : "Join team"}</strong>
           </div>
@@ -216,8 +223,10 @@ export function App() {
                 <h1>{access === "Assigned" ? titles[panel] : "Team access"}</h1>
                 <p>
                   {access === "Assigned" && panel !== "Alerts"
-                    ? descriptions[panel]
-                    : "Manage your demo workspace access."}
+                    ? person && panel === "Admin"
+                      ? "Manage your organization, its accounts and the join code."
+                      : descriptions[panel]
+                    : (person ? "Join your team to see its alerts." : "Manage your demo workspace access.")}
                 </p>
               </div>
               {customizeButton}

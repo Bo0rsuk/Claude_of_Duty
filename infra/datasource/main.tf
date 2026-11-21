@@ -20,6 +20,8 @@ locals {
   compose_env = {
     # A hostname makes Caddy obtain a TLS certificate, ":80" keeps plain HTTP.
     SITE_ADDRESS      = coalesce(local.fqdn, ":80")
+    FRONTEND_ADDRESS  = coalesce(var.frontend_domain, ":8080")
+    FRONTEND_UPSTREAM = var.frontend_domain == null ? "http://generator:8000" : "https://${var.frontend_origin}"
     PUBLIC_HOST       = local.public_host
     EVENTS_PER_SECOND = var.events_per_second
     WEBHOOK_URL       = var.webhook_url

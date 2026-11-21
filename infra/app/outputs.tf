@@ -81,7 +81,12 @@ output "frontend_url" {
   value       = local.frontend_url
 }
 
-output "frontend_deploy_command" {
-  description = "Uploads a built frontend (frontend/dist) and makes CloudFront serve it at once. Run from the repository root."
-  value       = "aws s3 sync frontend/dist s3://${aws_s3_bucket.frontend.id} --delete && aws cloudfront create-invalidation --distribution-id ${aws_cloudfront_distribution.frontend.id} --paths '/*'"
+output "frontend_bucket" {
+  description = "S3 bucket holding the built web application. Used by scripts/deploy-frontend.sh."
+  value       = aws_s3_bucket.frontend.id
+}
+
+output "frontend_distribution_id" {
+  description = "CloudFront distribution serving the web application. Used by scripts/deploy-frontend.sh."
+  value       = aws_cloudfront_distribution.frontend.id
 }

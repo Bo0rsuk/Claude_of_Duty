@@ -19,7 +19,15 @@
       ]
     },
     "severity": "CRITICAL",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-incident"
+        }
+      }
+    ],
     "presentation": {
       "title": "{{labels.service}}: {{labels.alertname}}",
       "body": "{{message}} on {{labels.instance}}",
@@ -36,7 +44,13 @@
     ],
     "runbookId": "rb-escalation",
     "createdAt": "2026-11-20T21:00:00.000Z",
-    "updatedAt": "2026-11-20T21:00:00.000Z"
+    "updatedAt": "2026-11-20T21:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-warnings",
@@ -92,7 +106,15 @@
       ]
     },
     "severity": "CRITICAL",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-payments"
+        }
+      }
+    ],
     "presentation": {
       "title": "{{service}}: {{code}}",
       "body": "{{message}} on {{host}}",
@@ -110,7 +132,13 @@
     ],
     "runbookId": "rb-db-timeout",
     "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "updatedAt": "2026-11-21T00:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-api-slow",
@@ -129,7 +157,15 @@
       ]
     },
     "severity": "WARNING",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-payments"
+        }
+      }
+    ],
     "presentation": {
       "title": "{{service}}: slow requests",
       "body": "{{http.method}} {{http.path}} took {{http.latency_ms}} ms",
@@ -144,7 +180,13 @@
     ],
     "runbookId": null,
     "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "updatedAt": "2026-11-21T00:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-log-errors",
@@ -166,7 +208,15 @@
       ]
     },
     "severity": "WARNING",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-platform"
+        }
+      }
+    ],
     "presentation": {
       "title": "{{service}}: {{code}}",
       "body": "{{message}}",
@@ -183,7 +233,13 @@
     ],
     "runbookId": "rb-db-timeout",
     "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "updatedAt": "2026-11-21T00:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-access-5xx",
@@ -202,7 +258,15 @@
       ]
     },
     "severity": "WARNING",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-platform"
+        }
+      }
+    ],
     "presentation": {
       "title": "HTTP {{status}} on {{path}}",
       "body": "{{method}} {{path}} answered {{status}} in {{requestTime}} s",
@@ -220,7 +284,13 @@
     ],
     "runbookId": "rb-wiki",
     "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "updatedAt": "2026-11-21T00:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-kafka-errors",
@@ -242,7 +312,15 @@
       ]
     },
     "severity": "CRITICAL",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-platform"
+        }
+      }
+    ],
     "presentation": {
       "title": "{{labels.service}}: {{kind}}",
       "body": "{{message}} ({{labels.pod}})",
@@ -260,7 +338,13 @@
     ],
     "runbookId": "rb-escalation",
     "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "updatedAt": "2026-11-21T00:00:00.000Z",
+    "throttle": {
+      "perRule": {
+        "max": 5,
+        "windowSeconds": 300
+      }
+    }
   },
   {
     "ruleId": "demo-kafka-info",

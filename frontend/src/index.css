@@ -242,6 +242,15 @@ pre,
   flex-shrink: 0;
   font: 560 2.15rem/1 var(--display);
   letter-spacing: -0.075em;
+  gap: 10px;
+}
+.logo {
+  height: 1em;
+  width: auto;
+  flex-shrink: 0;
+}
+.brand .logo {
+  height: 0.85em;
 }
 .sidebar-nav {
   position: relative;
@@ -355,6 +364,14 @@ pre,
   margin-left: auto;
   width: 14px;
 }
+.profile > span:not(.avatar) {
+  min-width: 0;
+}
+.profile :is(strong, small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .avatar {
   display: inline-grid;
   place-items: center;
@@ -376,8 +393,10 @@ pre,
 }
 .is-collapsed .sidebar .brand {
   padding: 0;
-  font-size: 1.35rem;
   justify-content: center;
+}
+.is-collapsed .sidebar .brand span {
+  display: none;
 }
 .is-collapsed .sidebar .nav-section a,
 .is-collapsed .sidebar-bottom button {
@@ -480,9 +499,14 @@ main:focus {
 }
 .customize {
   white-space: nowrap;
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
+  background: transparent;
+  color: var(--graphite);
+  border-color: transparent;
+  font-weight: 500;
+}
+.customize:hover {
+  background: var(--chip);
+  border-color: var(--line);
 }
 .surface {
   border: 1px solid var(--line);
@@ -1050,6 +1074,16 @@ main:focus {
 .alert-link:hover {
   text-decoration: underline;
 }
+.alert-table tbody tr {
+  cursor: pointer;
+}
+.alert-narrow {
+  display: none;
+  margin-top: 2px;
+  color: var(--graphite);
+  font-size: .82rem;
+}
+
 .alert-source {
   display: block;
   margin-top: 1px;
@@ -1509,6 +1543,57 @@ input[type="checkbox"] {
 .check-line {
   padding: 6px 0;
 }
+.recipients {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+.recipients li {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 2px 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 0.87rem;
+}
+.recipients button {
+  min-height: 26px;
+  width: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+.recipients svg {
+  width: 14px;
+  height: 14px;
+}
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.87rem;
+}
+.add-recipient {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.add-recipient input {
+  flex: 1;
+  min-width: 0;
+  min-height: 39px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+}
 .person {
   border-bottom: 1px solid var(--line);
   padding: 12px 0;
@@ -1917,8 +2002,10 @@ dialog::backdrop {
   }
   .sidebar .brand {
     padding: 0;
-    font-size: 1.35rem;
     justify-content: center;
+  }
+  .sidebar .brand span {
+    display: none;
   }
   .sidebar .nav-section h2,
   .sidebar .nav-section a span,
@@ -2200,4 +2287,316 @@ dialog::backdrop {
 }
 main[aria-label="Alerts"] {
   padding-top: clamp(12px, 1.2vw, 18px);
+}
+
+/* Sign-in screen, shown before the workspace when a backend is configured. */
+.sign-in {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 96px);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(24px, 5vw, 64px);
+}
+.sign-in .join {
+  width: min(420px, 100%);
+  justify-self: end;
+}
+.landing-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 560 2.15rem/1 var(--display);
+  letter-spacing: -0.075em;
+}
+.landing-brand .logo {
+  height: 0.85em;
+}
+.landing h1 {
+  margin: clamp(28px, 5vw, 56px) 0 16px;
+  max-width: 15em;
+  font: 500 clamp(2rem, 3.6vw, 3.1rem) / 1.12 var(--display);
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.landing-lead {
+  margin: 0;
+  max-width: 34em;
+  color: var(--graphite);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+.landing-steps {
+  list-style: none;
+  margin: 36px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 18px;
+  max-width: 34em;
+}
+.landing-steps li {
+  display: flex;
+  gap: 14px;
+}
+.landing-steps svg {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--focus);
+}
+.landing-steps strong {
+  display: block;
+  font-weight: 600;
+}
+.landing-steps span {
+  color: var(--muted);
+}
+@media (max-width: 860px) {
+  .sign-in {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  /* The form comes right after the headline; the details follow it. */
+  .sign-in .join {
+    justify-self: start;
+    order: 1;
+  }
+  .landing {
+    display: contents;
+  }
+  .landing-brand,
+  .landing h1,
+  .landing-lead {
+    order: 0;
+  }
+  .landing h1 {
+    margin: 8px 0 0;
+  }
+  .landing-steps {
+    order: 2;
+    margin-top: 8px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Feature-gap additions (sources, rule texts, first event, push devices,
+   outside contacts, older alerts). Appended as one block; keep it at the end.
+   --------------------------------------------------------------------------- */
+.older-alerts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.sample-event {
+  margin-top: 16px;
+}
+.sample-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.sample-message {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.sample-event pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sample-event details + details {
+  margin-top: 6px;
+}
+.channel-texts {
+  margin-top: 12px;
+}
+.channel-text {
+  padding: 10px 0 2px;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+}
+.channel-text > strong {
+  display: block;
+  font-size: 0.87rem;
+  margin-bottom: 6px;
+}
+.channel-text small {
+  font-weight: 450;
+}
+.push-devices {
+  margin: 14px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.push-devices h3 {
+  margin: 0 0 8px;
+}
+.push-devices ul {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.push-devices li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.push-devices li strong,
+.push-devices li small {
+  display: block;
+}
+.push-devices .hint {
+  margin-bottom: 10px;
+}
+.group-contacts {
+  margin-top: 18px;
+}
+.group-contacts h4 {
+  margin: 0 0 4px;
+}
+.group-contacts .person {
+  cursor: default;
+}
+
+/* Review pass: condition builder, owner column, alert details beside the feed. */
+.conditions {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.conditions > legend,
+.conditions > label {
+  display: block;
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+  font-weight: 550;
+}
+.conditions textarea {
+  width: 100%;
+  min-height: 70px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.conditions-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.87rem;
+  color: var(--graphite);
+}
+.condition {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+/* An operator without a value leaves the remove button in the last column. */
+.condition > .icon-btn {
+  grid-column: 4;
+}
+.condition input {
+  min-width: 0;
+  min-height: 39px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.conditions .hint {
+  margin: 4px 0 8px;
+}
+.conditions .buttons {
+  margin-top: 8px;
+  align-items: center;
+}
+.link-btn {
+  min-height: 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--focus);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nobody {
+  color: var(--muted-fill);
+}
+.feed-channels em {
+  flex-basis: 100%;
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--graphite);
+}
+/* The feed decides its own column layout from the room it has, wherever it is placed. */
+.tile-content > .feed {
+  container-type: inline-size;
+}
+@container (max-width: 760px) {
+  .alert-table {
+    min-width: 0;
+  }
+  .alert-table :is(th, td):is(:nth-child(4), :nth-child(5), :nth-child(6), :nth-child(7)) {
+    display: none;
+  }
+  .alert-table td:nth-child(3) {
+    width: auto;
+    min-width: 0;
+  }
+  .alert-table td {
+    height: auto;
+    padding-block: 12px;
+  }
+  .alert-table :is(th, td):first-child {
+    width: 1%;
+    padding-inline: 12px 4px;
+  }
+  .alert-table :is(th, td):nth-child(2) {
+    width: 1%;
+  }
+  .alert-table .feed-severity {
+    min-width: 0;
+  }
+  .alert-table :is(th, td):last-child {
+    width: 1%;
+    white-space: nowrap;
+  }
+  .alert-narrow {
+    display: block;
+  }
+}
+/* Between a phone and a very wide screen an opened alert sits beside the feed instead of replacing it. */
+@container (min-width: 900px) and (max-width: 1250px) {
+  .alerts-canvas:not(.editing) .split-mobile.show-detail {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .alerts-canvas:not(.editing) .split-mobile.show-detail > .full {
+    display: block;
+    grid-column: 1 / -1;
+  }
+  .alerts-canvas:not(.editing) .split-mobile.show-detail > .list {
+    display: block;
+  }
 }

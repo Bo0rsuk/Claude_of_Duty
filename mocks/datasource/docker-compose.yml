@@ -9,6 +9,8 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      FRONTEND_ADDRESS: ${FRONTEND_ADDRESS:-:8080}
+      FRONTEND_UPSTREAM: ${FRONTEND_UPSTREAM:-http://generator:8000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

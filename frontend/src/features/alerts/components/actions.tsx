@@ -6,7 +6,7 @@ import { CheckCheck, CircleCheck, Ellipsis } from "lucide-react";
 import { useState } from "react";
 
 export function Actions() {
-  const { alert: a, data, commit } = useWorkspaceContext(),
+  const { alert: a, data, commit, account } = useWorkspaceContext(),
     [dialog, setDialog] = useState(""),
     [target, setTarget] = useState("");
   if (!a) return null;
@@ -112,7 +112,7 @@ export function Actions() {
                 className="primary"
                 onClick={() =>
                   update(
-                    { ...addAction(a, "Reassigned", target), target },
+                    { ...addAction(a, "Reassigned", target), target, ...(a.owner !== undefined && { owner: target }) },
                     "Alert reassigned to " + target + ".",
                   )
                 }
@@ -122,7 +122,11 @@ export function Actions() {
             </>
           ) : (
             <>
-              <p>Delete {a.id} and its timeline from this demo workspace?</p>
+              <p>
+                {account
+                  ? `Delete ${a.id} and its timeline for everyone in the team? This cannot be undone. The next matching event opens a new alert.`
+                  : `Delete ${a.id} and its timeline from this demo workspace?`}
+              </p>
               <div className="buttons">
                 <button onClick={() => setDialog("")}>Cancel</button>
                 <button

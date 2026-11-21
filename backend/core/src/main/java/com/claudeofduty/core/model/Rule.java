@@ -21,7 +21,8 @@ public record Rule(
         String runbookId,
         Instant createdAt,
         Instant updatedAt,
-        String updatedBy) {
+        String updatedBy,
+        Delivery delivery) {
 
     public record Match(MatchMode mode, List<Condition> conditions) {
     }
@@ -56,5 +57,16 @@ public record Rule(
     }
 
     public record Limit(int max, int windowSeconds) {
+    }
+
+    /**
+     * The hours in which the routing applies. Outside them every recipient is notified on
+     * {@code outsideWindow} instead, or not at all when it is null.
+     */
+    public record Delivery(Window window, String outsideWindow) {
+    }
+
+    /** Times of day as "HH:mm" in the given IANA time zone (UTC when null). {@code to} before {@code from} spans midnight. */
+    public record Window(String from, String to, String timezone) {
     }
 }

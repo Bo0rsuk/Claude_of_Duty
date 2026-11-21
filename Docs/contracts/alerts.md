@@ -28,7 +28,8 @@
   "timing": {
     "receivedAt": "2026-11-20T20:59:22.401Z",
     "processedAt": "2026-11-20T20:59:22.512Z"
-  }
+  },
+  "checkedSteps": [0, 2]
 }
 ```
 
@@ -36,6 +37,8 @@
 - `title`, `body` and `fields` are rendered from the rule's `presentation` using the first event. `fields` holds the values of `presentation.fields`.
 - `timing` belongs to the first event and feeds the latency measurements. `publishedAt` is not stored: it travels in the real-time message.
 - `GET /alerts/{alertId}` returns the alert with the full `runbook` object embedded.
+- `checkedSteps` holds the positions (from 0) of the runbook checklist steps ticked off for this alert. `PUT /alerts/{alertId}/runbook-steps` replaces the list and publishes `alert.updated`, so everyone looking at the alert sees the same progress. It is `null` until a step is ticked, and no timeline entry is written for it.
+- `DELETE /alerts/{alertId}` removes the alert and its timeline and publishes `alert.deleted`. If the alert was not resolved, its fingerprint is released, so the next matching event opens a new alert.
 
 ### Status
 
@@ -94,7 +97,7 @@ The history shown in the alert window, oldest first.
 | `CREATED` | The alert is created | `ruleName`, `severity` |
 | `NOTIFICATION_SENT` | A provider accepted the notification | `channel`, `recipient`, `attempt`, `deliveredAt`, `latencyMs`, provider details such as `messageId` |
 | `NOTIFICATION_FAILED` | A delivery attempt failed | `channel`, `recipient`, `attempt`, `error`, `final` (true when no retries remain or retrying cannot help, e.g. a push to a user with no registered device) |
-| `NOTIFICATION_SUPPRESSED` | Throttling blocked a notification | `channel`, `recipient`, `reason` (`perRule` or `perRecipient`) |
+| `NOTIFICATION_SUPPRESSED` | Throttling or the rule's delivery window held a notification back | `channel`, `recipient`, `reason` (`perRule`, `perRecipient` or `deliveryWindow`) |
 | `NOTIFICATIONS_RESENT` | A user asked to notify everyone again | `notifications` (how many were queued) |
 | `ACKNOWLEDGED` | A user acknowledged the alert | none |
 | `ASSIGNED` | The alert was passed to a user | `assigneeId`, `assigneeName` |
@@ -115,7 +118,7 @@ retries on its own. There is one queue per channel, each with a dead-letter queu
   "severity": "CRITICAL",
   "recipient": { "address": "+48600100200", "userId": "usr-1", "name": "Anna Nowak" },
   "subject": null,
-  "body": "[CRITICAL] payment-api DB_TIMEOUT x1 https://app.waw-out.pl/alerts/1795208362373-9f3a61c2",
+  "body": "[CRITICAL] payment-api DB_TIMEOUT x1 https://squawk.com.pl/alerts/1795208362373-9f3a61c2",
   "attempt": 1,
   "receivedAt": "2026-11-20T20:59:22.401Z"
 }

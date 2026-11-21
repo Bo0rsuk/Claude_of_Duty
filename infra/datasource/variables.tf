@@ -28,6 +28,18 @@ variable "subdomain" {
   default     = "datasource"
 }
 
+variable "frontend_domain" {
+  description = "Domain of the web application that this instance forwards to frontend_origin, e.g. \"example.pl\". For a root domain whose DNS cannot point at CloudFront directly. Null disables it."
+  type        = string
+  default     = null
+}
+
+variable "frontend_origin" {
+  description = "Host that serves the web application: the CloudFront domain from the frontend_url output of infra/app, without https://. Required with frontend_domain."
+  type        = string
+  default     = null
+}
+
 variable "route53_zone_id" {
   description = "Route 53 hosted zone of domain_name. When null no DNS record is created and the A record has to be added at the registrar."
   type        = string

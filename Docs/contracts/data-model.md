@@ -9,10 +9,10 @@ a single-partition query scoped to the caller's organization.
 | `cod-orgs` | `orgId` | - | GSI `inviteCode-index` on `inviteCode` | Organization name and invite code |
 | `cod-members` | `orgId` | `userId` | GSI `userId-index` on `userId` | Membership, role, name, email, phone |
 | `cod-sources` | `orgId` | `sourceId` | - | Source definitions |
-| `cod-rules` | `orgId` | `ruleId` | - | Rules |
+| `cod-rules` | `orgId` | `ruleId` | - | Rules, including the delivery window (`delivery`) |
 | `cod-groups` | `orgId` | `groupId` | - | Recipient groups |
 | `cod-runbooks` | `orgId` | `runbookId` | - | Runbook library |
-| `cod-alerts` | `orgId` | `alertId` | - | Alerts |
+| `cod-alerts` | `orgId` | `alertId` | - | Alerts, including the ticked runbook steps (`checkedSteps`) |
 | `cod-alert-timeline` | `alertId` | `entryId` | - | Timeline entries |
 | `cod-dedup` | `fingerprint` | - | - | Pointer from fingerprint to the active `alertId` |
 | `cod-counters` | `counterKey` | - | TTL on `expiresAt` | Throttling counters |

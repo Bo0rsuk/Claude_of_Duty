@@ -14,6 +14,7 @@ public final class ParserRegistry {
         ParserRegistry registry = new ParserRegistry();
         registry.register("json", config -> new JsonParser(config.split()));
         registry.register("regex", config -> new RegexParser(config.pattern()));
+        registry.register("kv", config -> new KeyValueParser());
         return registry;
     }
 

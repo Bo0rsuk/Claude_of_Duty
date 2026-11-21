@@ -69,8 +69,15 @@ terraform apply
 
 Settings are in `infra/app/terraform.tfvars`. After `apply`:
 
-- `terraform output frontend_env` prints the variables for `frontend/.env`.
 - `terraform output ingest_url` prints the webhook URL pattern.
+- `terraform output frontend_url` prints the address of the web application.
+
+Publish the web application (builds `frontend/` against the deployed stack,
+uploads it to S3 and clears the CloudFront cache):
+
+```bash
+scripts/deploy-frontend.sh
+```
 
 To redeploy after a code change, run the same two commands again: Terraform
 notices the new jars, updates the functions and replaces the worker instance.

@@ -1,12 +1,13 @@
 import { Field } from "#components/field.tsx";
 import { Modal } from "#components/modal.tsx";
-import { detectFieldMapping } from "#features/sources/domain/field-mapping.ts";
+import { detectFields } from "#features/sources/services/field-detection.ts";
+import { type Preset, loadPresets } from "#features/sources/services/source-presets.ts";
 import { sourceTypes, useWorkspaceContext } from "#features/workspace";
 import { Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function SourceWizard({ onClose }: { onClose: () => void }) {
-  const { data, commit, setSourceId, setCompactDetail } = useWorkspaceContext();
+  const { data, commit, setSourceId, setCompactDetail, account } = useWorkspaceContext();
   const [step, setStep] = useState(0),
     [type, setType] = useState(sourceTypes[0]),
     [name, setName] = useState(""),
@@ -16,27 +17,42 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
     [mapping, setMapping] = useState(""),
     [approved, setApproved] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
+    [error, setError] = useState(""),
+    [presets, setPresets] = useState<Preset[]>([]),
+    [presetName, setPresetName] = useState("");
+  const preset = presets.find((candidate) => candidate.name === presetName);
+  // Ignore a result that arrives after the wizard was closed.
+  const open = useRef(true);
+  useEffect(
+    () => () => {
+      open.current = false;
+    },
+    [],
+  );
+  useEffect(() => {
+    // Without the presets the wizard still sets up a source by hand.
+    loadPresets()
+      .then((loaded) => open.current && setPresets(loaded))
+      .catch(() => undefined);
+  }, []);
   function detect() {
     setBusy(true);
     setApproved(false);
     setError("");
-    timer.current = setTimeout(() => {
-      try {
-        setMapping(detectFieldMapping(sample, format));
-      } catch {
-        setError("No fields detected. Check the event format and try again.");
-      }
-      setBusy(false);
-    }, 600);
+    detectFields(sample, format)
+      .then((detected) => open.current && setMapping(detected))
+      .catch(() => open.current && setError("No fields detected. Check the event format and try again."))
+      .finally(() => open.current && setBusy(false));
   }
-  const names = ["Source type", "Connection", "Event format", "Verify fields"];
+  // A webhook's address is assigned by the server when the source is saved.
+  const assignedAddress = Boolean(account) && (preset ? preset.type : type) === "Webhook";
+  // A preset already knows the event format and the fields, so only the connection is left to fill in.
+  const names = preset ? ["Source type", "Connection"] : ["Source type", "Connection", "Event format", "Verify fields"];
+  const last = names.length - 1;
   return (
     <Modal title="Add source" onClose={onClose}>
       <p className="muted">
-        Step {step + 1} of 4 · {names[step]}
+        Step {step + 1} of {names.length} · {names[step]}
       </p>
       <form
         onSubmit={(e) => {
@@ -46,11 +62,11 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
             return;
           }
           setError("");
-          if (step < 3) {
+          if (step < last) {
             setStep(step + 1);
             return;
           }
-          if (!approved || !mapping.trim()) {
+          if (!preset && (!approved || !mapping.trim())) {
             setError("Review and confirm the field mapping.");
             return;
           }
@@ -60,7 +76,17 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
               ...data,
               sources: [
                 ...data.sources,
-                { id, type, format, connection, mapping, last: Date.now() },
+                preset
+                  ? {
+                      id,
+                      type: preset.type,
+                      format: preset.format,
+                      connection,
+                      mapping: preset.mapping,
+                      last: Date.now(),
+                      preset: preset.setup,
+                    }
+                  : { id, type, format, connection, mapping, last: Date.now() },
               ],
             },
             "Source added locally.",
@@ -71,13 +97,50 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
         }}
       >
         {step === 0 ? (
-          <Field label="Source type">
-            <select value={type} onChange={(e) => setType(e.target.value)}>
-              {sourceTypes.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
+          <>
+            {presets.length > 0 && (
+              <Field label="Start from">
+                <select
+                  value={presetName}
+                  onChange={(e) => {
+                    const chosen = presets.find((candidate) => candidate.name === e.target.value);
+                    setPresetName(e.target.value);
+                    setConnection(chosen?.connection ?? "");
+                  }}
+                >
+                  <option value="">A source set up by hand</option>
+                  {presets.map((candidate) => (
+                    <option key={candidate.name} value={candidate.name}>
+                      {candidate.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {preset ? (
+              <>
+                <dl className="plain-dl">
+                  <dt>Type</dt>
+                  <dd>{preset.type}</dd>
+                  <dt>Format</dt>
+                  <dd>{preset.format}</dd>
+                </dl>
+                <details>
+                  <summary>Field mapping</summary>
+                  <pre>{preset.mapping}</pre>
+                </details>
+                <p className="helper">The event format and the fields are already set up. Only the connection is left.</p>
+              </>
+            ) : (
+              <Field label="Source type">
+                <select value={type} onChange={(e) => setType(e.target.value)}>
+                  {sourceTypes.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+          </>
         ) : step === 1 ? (
           <>
             <Field label="Source name">
@@ -89,14 +152,24 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
                 placeholder="settlement-worker…"
               />
             </Field>
-            <Field label="Demo connection address">
-              <input
-                required
-                value={connection}
-                onChange={(e) => setConnection(e.target.value)}
-                placeholder="demo://platform/settlement…"
-              />
-            </Field>
+            {assignedAddress ? (
+              <p className="helper">The address to send events to is shown after the source is added.</p>
+            ) : (
+              <Field label={account ? "Connection address" : "Demo connection address"}>
+                <input
+                  required
+                  value={connection}
+                  onChange={(e) => setConnection(e.target.value)}
+                  placeholder={
+                    !account
+                      ? "demo://platform/settlement…"
+                      : (preset ? preset.type : type) === "Kafka topic"
+                        ? "broker.example.com:9092/topic"
+                        : "https://example.com/events"
+                  }
+                />
+              </Field>
+            )}
           </>
         ) : step === 2 ? (
           <Field label="Event format">
@@ -140,7 +213,7 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
             </button>
             {mapping && (
               <>
-                <Field label="Suggested field mapping · simulation">
+                <Field label={account ? "Detected fields · mark the level, message and time" : "Suggested field mapping · simulation"}>
                   <textarea
                     value={mapping}
                     onChange={(e) => {
@@ -179,14 +252,7 @@ export function SourceWizard({ onClose }: { onClose: () => void }) {
             </button>
           )}
           <button className="primary">
-            {
-              [
-                "Set connection",
-                "Choose format",
-                "Verify fields",
-                "Add source",
-              ][step]
-            }
+            {step === last ? "Add source" : ["Set connection", "Choose format", "Verify fields"][step]}
           </button>
         </div>
       </form>

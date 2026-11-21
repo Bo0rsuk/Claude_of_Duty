@@ -7,6 +7,8 @@ import {
   severities,
   useWorkspaceContext,
 } from "#features/workspace";
+import { Plus, X } from "lucide-react";
+import { useState } from "react";
 
 export function SeveritySelector() {
   const { rule, editRule } = useWorkspaceContext();
@@ -20,9 +22,9 @@ export function SeveritySelector() {
             severity,
             channels:
               severity === "Critical"
-                ? ["Phone", "SMS"]
+                ? ["Phone", "SMS", "Push"]
                 : severity === "Warning"
-                  ? ["Email", "In-app"]
+                  ? ["Email", "Push"]
                   : ["In-app"],
           });
         }}
@@ -34,24 +36,88 @@ export function SeveritySelector() {
     </Field>
   );
 }
+/** An email address or a phone number in international form: a recipient who is not a member. */
+const isAddress = (text: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text) || /^\+\d{6,}$/.test(text);
+
 export function Targets() {
-  const { data, rule, editRule } = useWorkspaceContext();
+  const { data, rule, editRule, account } = useWorkspaceContext(),
+    [entry, setEntry] = useState(""),
+    [error, setError] = useState("");
+  const known = [
+    // Roles such as "on call" and whole teams exist in the demo only.
+    ...(account ? [] : ["On-call engineer", ...data.teams.filter((t) => t.id === homeTeam).map((t) => t.name)]),
+    ...data.groups.map((g) => g.name),
+    ...data.members.filter((m) => m.team === homeTeam && m.role !== "Pending").map((m) => m.name),
+  ];
+  function add() {
+    const text = entry.trim();
+    if (!text) return;
+    const name = known.find((candidate) => candidate.toLowerCase() === text.toLowerCase()) ?? text;
+    if (name === text && !known.includes(text) && !isAddress(text)) {
+      setError("Enter a member, a group, an email address or a phone number such as +48600100200.");
+      return;
+    }
+    if (!rule.targets.includes(name)) editRule({ targets: [...rule.targets, name] });
+    setEntry("");
+    setError("");
+  }
   return (
     <>
       <fieldset>
         <legend>Recipients</legend>
-        <Choices
-          items={[
-            "On-call engineer",
-            ...data.teams.filter((t) => t.id === homeTeam).map((t) => t.name),
-            ...data.groups.map((g) => g.name),
-            ...data.members
-              .filter((m) => m.team === homeTeam && m.role !== "Pending")
-              .map((m) => m.name),
-          ]}
-          values={rule.targets}
-          onChange={(targets) => editRule({ targets })}
-        />
+        {rule.targets.length ? (
+          <ul className="recipients">
+            {rule.targets.map((name) => (
+              <li key={name}>
+                {name}
+                <button
+                  type="button"
+                  aria-label={"Remove " + name}
+                  title="Remove"
+                  onClick={() => editRule({ targets: rule.targets.filter((other) => other !== name) })}
+                >
+                  <X />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="hint">
+            {account ? "Nobody is notified. Alerts from this rule only appear in the feed." : "Nobody is notified yet."}
+          </p>
+        )}
+        <div className="add-recipient">
+          <input
+            aria-label="Add a recipient"
+            list="recipient-suggestions"
+            value={entry}
+            placeholder="Add a member, group, email or phone…"
+            onChange={(e) => {
+              setEntry(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              add();
+            }}
+          />
+          <datalist id="recipient-suggestions">
+            {known
+              .filter((name) => !rule.targets.includes(name))
+              .map((name) => (
+                <option key={name} value={name} />
+              ))}
+          </datalist>
+          <button type="button" aria-label="Add recipient" title="Add recipient" disabled={!entry.trim()} onClick={add}>
+            <Plus />
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
       </fieldset>
       <fieldset>
         <legend>Delivery channels</legend>
@@ -78,8 +144,13 @@ export function Targets() {
             {channels.map((c) => (
               <option key={c}>{c}</option>
             ))}
+            <option>No notifications</option>
           </select>
         </Field>
+        <p className="hint">
+          Times are in your time zone. Outside the window every recipient is notified on the chosen channel only. Leave
+          the window empty to notify at any hour.
+        </p>
       </details>
     </>
   );

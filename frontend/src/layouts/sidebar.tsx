@@ -1,3 +1,4 @@
+import { Logo } from "#components/logo.tsx";
 import { type Panel, allowed, useWorkspaceContext } from "#features/workspace";
 import { SidebarNavigation } from "#layouts/sidebar-navigation.tsx";
 import {
@@ -64,7 +65,10 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
   }
   return (
     <>
-      <div className="brand">FANS</div>
+      <div className="brand">
+        <Logo />
+        <span>Squawk</span>
+      </div>
       <SidebarNavigation panel={access === "Assigned" ? panel : null}>
         {access === "Assigned" && (
           <>
