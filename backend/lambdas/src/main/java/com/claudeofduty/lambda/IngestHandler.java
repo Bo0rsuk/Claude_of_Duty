@@ -4,8 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
+import com.claudeofduty.core.ingest.WebhookIntake;
 import com.claudeofduty.core.model.RawRecord;
-import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.port.RawRecordSink;
 import com.claudeofduty.core.port.SourceLookup;
 import com.claudeofduty.aws.Env;
@@ -13,12 +13,10 @@ import com.claudeofduty.aws.AwsClients;
 import com.claudeofduty.aws.DynamoSourceLookup;
 import com.claudeofduty.aws.KinesisRawRecordSink;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -32,6 +30,7 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
     private static final String PRIMING = "priming";
 
     private final SourceLookup sources;
+    private final WebhookIntake intake;
     private final RawRecordSink sink;
     private final Clock clock;
 
@@ -48,6 +47,7 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
 
     IngestHandler(SourceLookup sources, RawRecordSink sink, Clock clock) {
         this.sources = sources;
+        this.intake = new WebhookIntake(sources);
         this.sink = sink;
         this.clock = clock;
     }
@@ -56,8 +56,10 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
     public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent request, Context context) {
         Instant receivedAt = clock.instant();
 
-        Optional<Source> source = findSource(request).filter(candidate -> accepts(candidate, token(request)));
-        if (source.isEmpty()) {
+        Map<String, String> path = orEmpty(request.getPathParameters());
+        String orgId = path.get("orgId");
+        String sourceId = path.get("sourceId");
+        if (orgId == null || sourceId == null || !intake.accepts(orgId, sourceId, token(request))) {
             return HttpResponses.error(404, "NOT_FOUND", "Unknown source or invalid token");
         }
         String payload = body(request);
@@ -65,30 +67,9 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
             return HttpResponses.error(400, "VALIDATION_FAILED", "Request body is empty");
         }
 
-        RawRecord record = new RawRecord(
-                UUID.randomUUID().toString(), source.get().orgId(), source.get().sourceId(), receivedAt, payload);
+        RawRecord record = new RawRecord(UUID.randomUUID().toString(), orgId, sourceId, receivedAt, payload);
         sink.publish(record);
         return HttpResponses.json(202, Map.of("recordId", record.recordId()));
-    }
-
-    private Optional<Source> findSource(APIGatewayV2HTTPEvent request) {
-        Map<String, String> path = orEmpty(request.getPathParameters());
-        String orgId = path.get("orgId");
-        String sourceId = path.get("sourceId");
-        if (orgId == null || sourceId == null) {
-            return Optional.empty();
-        }
-        return sources.find(orgId, sourceId);
-    }
-
-    private static boolean accepts(Source source, String token) {
-        return source.enabled()
-                && source.connector() != null
-                && Source.WEBHOOK.equals(source.connector().type())
-                && source.ingestToken() != null
-                && token != null
-                && MessageDigest.isEqual(
-                        source.ingestToken().getBytes(StandardCharsets.UTF_8), token.getBytes(StandardCharsets.UTF_8));
     }
 
     private static String token(APIGatewayV2HTTPEvent request) {

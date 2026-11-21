@@ -16,6 +16,9 @@ import com.claudeofduty.core.model.Source.ParserConfig;
 import com.claudeofduty.core.service.AlertService;
 import com.claudeofduty.core.service.ConfigService;
 import com.claudeofduty.core.service.PreviewService;
+import com.fasterxml.jackson.databind.JsonNode;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,7 +40,8 @@ public final class ApiRoutes {
         // Account and organization
         router.add("GET", "/me", null, request -> Response.ok(organizations.profile(request.caller())));
         router.add("PATCH", "/me", USER, request -> Response.ok(
-                organizations.updateProfile(request.caller(), request.text("name"), request.text("phone"))));
+                organizations.updateProfile(request.caller(), request.text("name"), request.text("phone"),
+                        request.text("email"))));
         router.add("POST", "/orgs/join", null, request -> Response.ok(
                 organizations.join(request.caller(), request.text("inviteCode"))));
         router.add("POST", "/orgs", null, request -> Response.created(
@@ -46,8 +50,12 @@ public final class ApiRoutes {
         router.add("POST", "/org/invite-code", ADMIN, request -> Response.ok(
                 organizations.regenerateInviteCode(request.caller())));
         router.add("GET", "/members", USER, request -> Response.ok(Page.of(organizations.members(request.caller()))));
+        router.add("POST", "/members", ADMIN, request -> Response.created(organizations.invite(request.caller(),
+                request.text("email"), request.text("name"),
+                request.text("role") == null ? null : role(request.text("role")))));
         router.add("PATCH", "/members/{userId}", ADMIN, request -> Response.ok(
-                organizations.changeRole(request.caller(), request.path("userId"), role(request.text("role")))));
+                organizations.updateMember(request.caller(), request.path("userId"), role(request.text("role")),
+                        request.text("name"), request.text("phone"), request.text("email"))));
         // Push notifications: the devices of the signed-in user
         router.add("GET", "/push/public-key", null, request -> Response.ok(
                 Map.of("publicKey", services.push().publicKey())));
@@ -112,6 +120,12 @@ public final class ApiRoutes {
                 alerts.addNote(request.caller(), request.path("alertId"), request.text("text"))));
         router.add("POST", "/alerts/{alertId}/resend", TEAM_LEAD, request -> Response.ok(
                 alerts.resend(request.caller(), request.path("alertId"))));
+        router.add("PUT", "/alerts/{alertId}/runbook-steps", USER, request -> Response.ok(
+                alerts.checkSteps(request.caller(), request.path("alertId"), steps(request))));
+        router.add("DELETE", "/alerts/{alertId}", TEAM_LEAD, request -> {
+            alerts.delete(request.caller(), request.path("alertId"));
+            return Response.noContent();
+        });
 
         return router;
     }
@@ -137,6 +151,19 @@ public final class ApiRoutes {
         } catch (IllegalArgumentException e) {
             throw ApiException.invalid("role must be one of user, team_lead, admin");
         }
+    }
+
+    /** @return the "checked" list of the body, or null when it is missing or is not a list of whole numbers */
+    private static List<Integer> steps(Request request) {
+        JsonNode checked = request.body() == null ? null : request.body().get("checked");
+        if (checked == null || !checked.isArray()) {
+            return null;
+        }
+        List<Integer> steps = new ArrayList<>();
+        for (JsonNode step : checked) {
+            steps.add(step.isIntegralNumber() ? step.asInt() : null);
+        }
+        return steps;
     }
 
     /** @return a part of the JSON body mapped onto a model type, or null when the body does not have it */

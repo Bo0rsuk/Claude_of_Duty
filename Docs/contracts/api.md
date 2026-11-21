@@ -31,13 +31,14 @@ The minimum role is given in the last column of each table.
 | Method and path | Purpose | Role |
 |---|---|---|
 | `GET /me` | Profile and membership: `{ userId, email, name, phone, org: { orgId, name, role }, tokenRefreshNeeded }`. `org` is null before joining. `tokenRefreshNeeded` is true when the caller's token does not carry their organization yet; the client must get a new token before subscribing to real-time channels. | any |
-| `PATCH /me` | Update `name` and `phone` | any |
+| `PATCH /me` | Update `name`, `phone` and `email`. The email is also the sign-in name, so it changes there too and the user signs in with the new address. `409` when the address is taken. | any |
 | `POST /orgs` | Create an organization `{ name }`. The caller becomes its `admin`. | any, no org yet |
 | `POST /orgs/join` | Join with `{ inviteCode }` as `user`. Whoever joins an organization that has no members yet becomes its `admin`. | any, no org yet |
 | `GET /org` | Organization details. `inviteCode` is included for `admin` only. | user |
 | `POST /org/invite-code` | Generate a new invite code | admin |
 | `GET /members` | List members | user |
-| `PATCH /members/{userId}` | Change `{ role }` | admin |
+| `POST /members` | Add a person with `{ email, name?, role? }` (role defaults to `user`). Their account is created in this organization and they get a temporary password by email, which they replace on first sign-in. `409` when the email already has an account: share the invite code instead. | admin |
+| `PATCH /members/{userId}` | Change any of `{ role, name, phone, email }`. A part that is left out stays as it is; an empty `phone` removes the number. A new `email` also becomes the member's sign-in name. | admin |
 | `DELETE /members/{userId}` | Remove a member | admin |
 
 ### Sources
@@ -76,7 +77,9 @@ The minimum role is given in the last column of each table.
 | `POST /alerts/{alertId}/resolve` | Resolve | user |
 | `POST /alerts/{alertId}/assign` | Pass to `{ userId }` | user |
 | `POST /alerts/{alertId}/notes` | Add a comment `{ text }` | user |
-| `POST /alerts/{alertId}/resend` | Notify everyone in the rule's current routing again. Throttling does not apply. Answers `409` when the rule was deleted. | team_lead |
+| `POST /alerts/{alertId}/resend` | Notify everyone in the rule's current routing again. Throttling and the rule's delivery window do not apply. Answers `409` when the rule was deleted. | team_lead |
+| `PUT /alerts/{alertId}/runbook-steps` | Set which steps of the runbook checklist are done: `{ "checked": [0, 2] }` replaces the alert's `checkedSteps` | user |
+| `DELETE /alerts/{alertId}` | Delete the alert and its timeline. Answers `204` and publishes `alert.deleted`. | team_lead |
 
 The action endpoints return the updated alert and publish `alert.updated`.
 
@@ -102,11 +105,18 @@ The action endpoints return the updated alert and publish `alert.updated`.
 
 | Method and path | Purpose |
 |---|---|
-| `POST /ingest/{orgId}/{sourceId}?token={ingestToken}` | Push one payload from a webhook source |
+| `POST {ingest url}/ingest/{orgId}/{sourceId}?token={ingestToken}` | Push one payload from a webhook source |
 
 - No JWT. The token may also be sent as the `X-Ingest-Token` header.
-- The body is stored untouched as one `RawRecord`, whatever its content type.
-- Returns `202 { "recordId": "..." }`. An unknown or disabled source or a wrong token returns 404.
+- The body is stored untouched as one record, whatever its content type.
+- Returns `202 { "recordId": "..." }`.
+
+There are two ingest URLs with the same path:
+
+| Route | URL | Wrong token or unknown source |
+|---|---|---|
+| Direct (default) | `ingest_base_url` output, `VITE_INGEST_URL` | Still `202`. API Gateway writes to the stream without running any code, and the processor drops the payload when it reads it. |
+| Through the ingest function | `api_url` output | `404` at once. Shares the account's Lambda concurrency, so it is throttled first under load. |
 
 ## Real-time channels
 
@@ -128,8 +138,8 @@ Alert message:
 }
 ```
 
-`type` is `alert.created` or `alert.updated`. An update carries the whole alert
-again, so the client replaces its copy. An open alert window reloads its
+`type` is `alert.created`, `alert.updated` or `alert.deleted`. An update carries the whole alert
+again, so the client replaces its copy. After `alert.deleted` the client drops its copy. An open alert window reloads its
 timeline when an update for its alert arrives.
 
 Notification message:

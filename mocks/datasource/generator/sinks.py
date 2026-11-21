@@ -36,6 +36,9 @@ class Feed:
         """
         if not self._items:
             return [], self._last_seq
+        if after is not None and after > self._last_seq:
+            # A cursor from before this service restarted: the numbering began again, so start over.
+            after = None
         first_seq = self._items[0][0]
         if after is None:
             start = max(0, len(self._items) - limit)

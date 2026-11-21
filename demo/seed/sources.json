@@ -26,7 +26,7 @@
     "enabled": true,
     "connector": {
       "type": "http-pull",
-      "url": "https://datasource.waw-out.pl/api/events",
+      "url": "https://datasource.squawk.com.pl/api/events",
       "intervalSeconds": 5,
       "itemsPath": "items",
       "cursorParam": "after",
@@ -50,7 +50,7 @@
     "enabled": true,
     "connector": {
       "type": "http-pull",
-      "url": "https://datasource.waw-out.pl/logs",
+      "url": "https://datasource.squawk.com.pl/logs",
       "intervalSeconds": 5,
       "cursorParam": "after",
       "cursorFrom": "header:X-Next-After"
@@ -74,7 +74,7 @@
     "enabled": true,
     "connector": {
       "type": "http-pull",
-      "url": "https://datasource.waw-out.pl/logs/access",
+      "url": "https://datasource.squawk.com.pl/logs/access",
       "intervalSeconds": 5,
       "cursorParam": "after",
       "cursorFrom": "header:X-Next-After"
@@ -96,7 +96,7 @@
     "enabled": true,
     "connector": {
       "type": "kafka",
-      "bootstrapServers": "datasource.waw-out.pl:9092",
+      "bootstrapServers": "datasource.squawk.com.pl:9092",
       "topic": "infra.events",
       "groupId": "claude-of-duty"
     },

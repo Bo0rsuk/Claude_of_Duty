@@ -9,6 +9,8 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      FRONTEND_ADDRESS: ${FRONTEND_ADDRESS:-:8080}
+      FRONTEND_UPSTREAM: ${FRONTEND_UPSTREAM:-http://generator:8000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -21,6 +23,7 @@ services:
     restart: unless-stopped
     environment:
       EVENTS_PER_SECOND: ${EVENTS_PER_SECOND:-2}
+      INCIDENT_INTERVAL_SECONDS: ${INCIDENT_INTERVAL_SECONDS:-0}
       KAFKA_BOOTSTRAP: redpanda:9092
       KAFKA_TOPIC: ${KAFKA_TOPIC:-infra.events}
       WEBHOOK_URL: ${WEBHOOK_URL:-}

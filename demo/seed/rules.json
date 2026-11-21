@@ -1,82 +1,9 @@
 [
   {
-    "ruleId": "demo-errors",
-    "orgId": "demo",
-    "sourceId": "mock-webhook",
-    "name": "Errors from monitoring",
-    "enabled": true,
-    "match": {
-      "mode": "all",
-      "conditions": [
-        {
-          "field": "level",
-          "op": "in",
-          "value": [
-            "ERROR",
-            "FATAL"
-          ]
-        }
-      ]
-    },
-    "severity": "CRITICAL",
-    "routing": [],
-    "presentation": {
-      "title": "{{labels.service}}: {{labels.alertname}}",
-      "body": "{{message}} on {{labels.instance}}",
-      "fields": [
-        "labels.alertname",
-        "labels.service",
-        "labels.instance",
-        "level"
-      ]
-    },
-    "groupBy": [
-      "labels.service",
-      "labels.alertname"
-    ],
-    "runbookId": "rb-escalation",
-    "createdAt": "2026-11-20T21:00:00.000Z",
-    "updatedAt": "2026-11-20T21:00:00.000Z"
-  },
-  {
-    "ruleId": "demo-warnings",
-    "orgId": "demo",
-    "sourceId": "mock-webhook",
-    "name": "Warnings from monitoring",
-    "enabled": true,
-    "match": {
-      "mode": "all",
-      "conditions": [
-        {
-          "field": "level",
-          "op": "eq",
-          "value": "WARN"
-        }
-      ]
-    },
-    "severity": "WARNING",
-    "routing": [],
-    "presentation": {
-      "title": "{{labels.service}}: {{labels.alertname}}",
-      "body": "{{message}}",
-      "fields": [
-        "labels.alertname",
-        "labels.service",
-        "labels.instance"
-      ]
-    },
-    "groupBy": [
-      "labels.alertname"
-    ],
-    "runbookId": null,
-    "createdAt": "2026-11-20T21:00:00.000Z",
-    "updatedAt": "2026-11-20T21:00:00.000Z"
-  },
-  {
-    "ruleId": "demo-api-errors",
+    "ruleId": "demo-critical-payments",
     "orgId": "demo",
     "sourceId": "mock-json-api",
-    "name": "Payment API errors",
+    "name": "Payment API failures",
     "enabled": true,
     "match": {
       "mode": "all",
@@ -92,178 +19,96 @@
       ]
     },
     "severity": "CRITICAL",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-payments"
+        }
+      },
+      {
+        "channel": "sms",
+        "target": {
+          "type": "user",
+          "id": "demo-david-miller"
+        }
+      }
+    ],
     "presentation": {
-      "title": "{{service}}: {{code}}",
-      "body": "{{message}} on {{host}}",
+      "title": "{{service}} is failing",
+      "body": "{{code}}: {{message}} on {{host}}",
       "fields": [
         "service",
-        "host",
         "code",
+        "host",
         "http.status",
-        "http.latency_ms"
-      ]
-    },
-    "groupBy": [
-      "service",
-      "code"
-    ],
-    "runbookId": "rb-db-timeout",
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
-  },
-  {
-    "ruleId": "demo-api-slow",
-    "orgId": "demo",
-    "sourceId": "mock-json-api",
-    "name": "Slow payment API requests",
-    "enabled": true,
-    "match": {
-      "mode": "all",
-      "conditions": [
-        {
-          "field": "http.latency_ms",
-          "op": "gt",
-          "value": 3000
-        }
-      ]
-    },
-    "severity": "WARNING",
-    "routing": [],
-    "presentation": {
-      "title": "{{service}}: slow requests",
-      "body": "{{http.method}} {{http.path}} took {{http.latency_ms}} ms",
-      "fields": [
-        "service",
-        "http.path",
         "http.latency_ms"
       ]
     },
     "groupBy": [
       "service"
     ],
-    "runbookId": null,
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "throttle": {
+      "perRule": {
+        "max": 20,
+        "windowSeconds": 300
+      }
+    },
+    "runbookId": "rb-db-timeout",
+    "createdAt": "2026-11-20T21:00:00.000Z",
+    "updatedAt": "2026-11-20T21:00:00.000Z"
   },
   {
-    "ruleId": "demo-log-errors",
+    "ruleId": "demo-warning-slow-queries",
     "orgId": "demo",
     "sourceId": "mock-app-log",
-    "name": "Errors in the application log",
+    "name": "Slow database queries",
     "enabled": true,
     "match": {
       "mode": "all",
       "conditions": [
         {
-          "field": "level",
-          "op": "in",
-          "value": [
-            "ERROR",
-            "FATAL"
-          ]
+          "field": "code",
+          "op": "eq",
+          "value": "SLOW_QUERY"
         }
       ]
     },
     "severity": "WARNING",
-    "routing": [],
+    "routing": [
+      {
+        "channel": "ui",
+        "target": {
+          "type": "group",
+          "id": "grp-platform"
+        }
+      }
+    ],
     "presentation": {
-      "title": "{{service}}: {{code}}",
+      "title": "{{service}}: slow queries",
       "body": "{{message}}",
       "fields": [
         "service",
         "host",
-        "code",
-        "traceId"
+        "code"
       ]
     },
     "groupBy": [
-      "service",
-      "code"
+      "service"
     ],
-    "runbookId": "rb-db-timeout",
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "throttle": {
+      "perRule": {
+        "max": 20,
+        "windowSeconds": 300
+      }
+    },
+    "runbookId": "rb-restart",
+    "createdAt": "2026-11-20T21:00:00.000Z",
+    "updatedAt": "2026-11-20T21:00:00.000Z"
   },
   {
-    "ruleId": "demo-access-5xx",
-    "orgId": "demo",
-    "sourceId": "mock-access-log",
-    "name": "HTTP 5xx at the edge",
-    "enabled": true,
-    "match": {
-      "mode": "all",
-      "conditions": [
-        {
-          "field": "status",
-          "op": "gte",
-          "value": 500
-        }
-      ]
-    },
-    "severity": "WARNING",
-    "routing": [],
-    "presentation": {
-      "title": "HTTP {{status}} on {{path}}",
-      "body": "{{method}} {{path}} answered {{status}} in {{requestTime}} s",
-      "fields": [
-        "method",
-        "path",
-        "status",
-        "requestTime",
-        "clientIp"
-      ]
-    },
-    "groupBy": [
-      "path",
-      "status"
-    ],
-    "runbookId": "rb-wiki",
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
-  },
-  {
-    "ruleId": "demo-kafka-errors",
-    "orgId": "demo",
-    "sourceId": "mock-kafka",
-    "name": "Kubernetes errors",
-    "enabled": true,
-    "match": {
-      "mode": "all",
-      "conditions": [
-        {
-          "field": "level",
-          "op": "in",
-          "value": [
-            "ERROR",
-            "FATAL"
-          ]
-        }
-      ]
-    },
-    "severity": "CRITICAL",
-    "routing": [],
-    "presentation": {
-      "title": "{{labels.service}}: {{kind}}",
-      "body": "{{message}} ({{labels.pod}})",
-      "fields": [
-        "kind",
-        "labels.service",
-        "labels.pod",
-        "labels.namespace",
-        "value"
-      ]
-    },
-    "groupBy": [
-      "labels.service",
-      "kind"
-    ],
-    "runbookId": "rb-escalation",
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
-  },
-  {
-    "ruleId": "demo-kafka-info",
+    "ruleId": "demo-info-cache",
     "orgId": "demo",
     "sourceId": "mock-kafka",
     "name": "Cache refreshes",
@@ -282,17 +127,19 @@
     "routing": [],
     "presentation": {
       "title": "{{labels.service}}: cache refreshed",
-      "body": "{{message}}",
+      "body": "{{message}} ({{labels.pod}})",
       "fields": [
         "labels.service",
-        "labels.pod"
+        "labels.pod",
+        "value"
       ]
     },
     "groupBy": [
       "labels.service"
     ],
+    "throttle": null,
     "runbookId": null,
-    "createdAt": "2026-11-21T00:00:00.000Z",
-    "updatedAt": "2026-11-21T00:00:00.000Z"
+    "createdAt": "2026-11-20T21:00:00.000Z",
+    "updatedAt": "2026-11-20T21:00:00.000Z"
   }
 ]

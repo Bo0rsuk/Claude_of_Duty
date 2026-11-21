@@ -7,15 +7,12 @@ output "public_ip" {
   value       = aws_eip.this.public_ip
 }
 
-output "dns_record" {
-  description = "Record to add at the DNS provider of the domain. Null when Terraform manages it in Route 53 or no domain is set."
-  value = local.fqdn == null || var.route53_zone_id != null ? null : {
-    zone  = var.domain_name
-    name  = var.subdomain
-    type  = "A"
-    value = aws_eip.this.public_ip
-    ttl   = 300
-  }
+output "dns_records" {
+  description = "Records to add at the DNS provider of the domain. Empty when Terraform manages them in Route 53 or no domain is set."
+  value = var.route53_zone_id != null ? [] : concat(
+    local.fqdn == null ? [] : [{ name = local.fqdn, type = "A", value = aws_eip.this.public_ip, ttl = 300 }],
+    var.frontend_domain == null ? [] : [{ name = var.frontend_domain, type = "A", value = aws_eip.this.public_ip, ttl = 300 }],
+  )
 }
 
 output "base_url" {

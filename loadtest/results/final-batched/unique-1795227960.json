@@ -1,0 +1,74 @@
+{
+  "run_id": "unique-1795227960",
+  "started_at": "2026-11-21T02:26:41+00:00",
+  "scenario": "unique",
+  "settings": {
+    "target_rate_events_per_s": 200.0,
+    "duration_s": 30.0,
+    "events_per_request": 10,
+    "warmup_s": 10.0
+  },
+  "ingest": {
+    "events_sent": 6000,
+    "events_accepted": 6000,
+    "http_statuses": {
+      "202": 600
+    },
+    "achieved_rate_events_per_s": 200.0,
+    "accepted_rate_events_per_s": 200.0
+  },
+  "latency": {
+    "http_round_trip": {
+      "samples": 600,
+      "min_ms": 41.5,
+      "p50_ms": 52.8,
+      "p90_ms": 129.4,
+      "p99_ms": 248.3,
+      "max_ms": 273.8,
+      "mean_ms": 73.5
+    },
+    "end_to_end": {
+      "samples": 6000,
+      "min_ms": 132.7,
+      "p50_ms": 262.0,
+      "p90_ms": 393.5,
+      "p99_ms": 628.8,
+      "max_ms": 819.0,
+      "mean_ms": 282.0
+    },
+    "ingest_to_alert": {
+      "samples": 6000,
+      "min_ms": 18.0,
+      "p50_ms": 93.0,
+      "p90_ms": 187.0,
+      "p99_ms": 430.0,
+      "max_ms": 613.0,
+      "mean_ms": 105.3
+    },
+    "alert_to_publish": {
+      "samples": 6000,
+      "min_ms": 16.0,
+      "p50_ms": 55.0,
+      "p90_ms": 103.0,
+      "p99_ms": 161.0,
+      "max_ms": 287.0,
+      "mean_ms": 63.0
+    },
+    "notification": {
+      "samples": 50,
+      "min_ms": 252.0,
+      "p50_ms": 1368.0,
+      "p90_ms": 2942.0,
+      "p99_ms": 4820.0,
+      "max_ms": 4820.0,
+      "mean_ms": 1521.4
+    }
+  },
+  "live_feed_caught_up": true,
+  "processing": {
+    "alerts_delivered_to_live_feed": 6000,
+    "events_lost": 0,
+    "processed_rate_events_per_s": 198.0,
+    "seconds_to_catch_up_after_last_send": 0.6
+  }
+}

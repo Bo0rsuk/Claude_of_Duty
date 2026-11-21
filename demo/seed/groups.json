@@ -1,0 +1,40 @@
+[
+  {
+    "groupId": "grp-payments",
+    "orgId": "demo",
+    "name": "Payments on-call",
+    "members": [
+      {
+        "type": "user",
+        "userId": "demo-emily-clark"
+      },
+      {
+        "type": "user",
+        "userId": "demo-michael-brown"
+      },
+      {
+        "type": "user",
+        "userId": "demo-sarah-jones"
+      }
+    ],
+    "createdAt": "2026-11-20T21:40:00.000Z",
+    "updatedAt": "2026-11-20T21:40:00.000Z"
+  },
+  {
+    "groupId": "grp-platform",
+    "orgId": "demo",
+    "name": "Platform engineers",
+    "members": [
+      {
+        "type": "user",
+        "userId": "demo-john-smith"
+      },
+      {
+        "type": "user",
+        "userId": "demo-david-miller"
+      }
+    ],
+    "createdAt": "2026-11-20T21:40:00.000Z",
+    "updatedAt": "2026-11-20T21:40:00.000Z"
+  }
+]

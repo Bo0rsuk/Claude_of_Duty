@@ -26,14 +26,15 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/** Checks that the demo data in demo/seed turns the mock's webhook payloads into the expected alerts. */
+/** Checks that the demo data in demo/seed turns the mock's JSON API events into the expected alerts. */
 class DemoSeedTest {
 
     private static final Path SEED = Path.of("..", "..", "demo", "seed");
 
     @Test
-    void mockWebhookPayloadsBecomeAlertsUnderTheSeededRules() throws IOException {
-        Source source = load("sources.json", Source.class).get(0);
+    void mockApiEventsBecomeOneCriticalAlertPerFailingService() throws IOException {
+        Source source = load("sources.json", Source.class).stream()
+                .filter(candidate -> candidate.sourceId().equals("mock-json-api")).findFirst().orElseThrow();
         List<Rule> rules = load("rules.json", Rule.class);
         List<Alert> created = new ArrayList<>();
         EventProcessor processor = new EventProcessor(
@@ -49,20 +50,30 @@ class DemoSeedTest {
                 "http://localhost:5173",
                 Clock.systemUTC());
 
-        processor.process(List.of(webhook("DB_TIMEOUT", "error"), webhook("SLOW_QUERY", "warn"), webhook("DB_TIMEOUT", "error")));
+        processor.process(List.of(
+                event("1", "ERROR", "DB_TIMEOUT", "payment-api"),
+                event("2", "INFO", "REQUEST_OK", "payment-api"),
+                event("3", "FATAL", "OUT_OF_MEMORY", "payment-api"),
+                event("4", "ERROR", "UPSTREAM_5XX", "checkout-api")));
 
-        assertEquals(List.of("monitoring: DB_TIMEOUT x2 CRITICAL", "monitoring: SLOW_QUERY x1 WARNING"),
+        // Failures are grouped by service whatever their code, and ordinary traffic raises nothing.
+        assertEquals(List.of("payment-api is failing x2 CRITICAL", "checkout-api is failing x1 CRITICAL"),
                 created.stream().map(alert -> alert.title() + " x" + alert.count() + " " + alert.severity()).toList());
-        assertEquals("Something happened on monitoring-1", created.get(0).body());
+        assertEquals("DB_TIMEOUT: Something happened on payment-api-1", created.get(0).body());
     }
 
-    private static RawRecord webhook(String alertName, String severity) {
+    @Test
+    void seedHoldsOneRulePerSeverity() throws IOException {
+        assertEquals(List.of("CRITICAL", "WARNING", "INFO"),
+                load("rules.json", Rule.class).stream().map(rule -> rule.severity().name()).toList());
+    }
+
+    private static RawRecord event(String id, String level, String code, String service) {
         String payload = """
-                {"version": "4", "status": "firing", "receiver": "claude-of-duty", "alerts": [{"status": "firing",
-                  "labels": {"alertname": "%s", "severity": "%s", "service": "monitoring", "instance": "monitoring-1"},
-                  "annotations": {"summary": "Something happened"}, "startsAt": "2026-11-20T20:59:34Z"}]}"""
-                .formatted(alertName, severity);
-        return new RawRecord("record-" + alertName, "demo", "mock-webhook", Instant.now(), payload);
+                {"id": "%s", "timestamp": "2026-11-20T20:59:34.000Z", "service": "%s", "host": "%s-1", "level": "%s",
+                  "code": "%s", "message": "Something happened", "http": {"status": 503, "latency_ms": 900}}"""
+                .formatted(id, service, service, level, code);
+        return new RawRecord("record-" + id, "demo", "mock-json-api", Instant.now(), payload);
     }
 
     private static <T> List<T> load(String file, Class<T> type) throws IOException {
@@ -82,13 +93,9 @@ class DemoSeedTest {
         }
 
         @Override
-        public void create(Alert alert) {
+        public Alert addEvents(Alert alert) {
             created.add(alert);
-        }
-
-        @Override
-        public Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
-            return Optional.empty();
+            return alert;
         }
 
         @Override

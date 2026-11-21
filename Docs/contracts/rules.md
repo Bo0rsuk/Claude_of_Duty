@@ -48,6 +48,11 @@ at most, so a change made in the UI takes effect without a restart.
     "perRecipient": { "max": 2, "windowSeconds": 300 }
   },
 
+  "delivery": {
+    "window": { "from": "08:00", "to": "20:00", "timezone": "Europe/Warsaw" },
+    "outsideWindow": "email"
+  },
+
   "runbookId": "rb-db-timeout",
 
   "createdAt": "2026-11-20T21:00:00.000Z",
@@ -141,6 +146,16 @@ Both parts are optional.
 
 A suppressed notification is recorded in the alert timeline. The alert itself
 is always created and shown in the live feed.
+
+## delivery
+
+Optional. Without it the routing applies at any hour.
+
+- `window.from` and `window.to` are times of day as `HH:mm`, read in `window.timezone` (an IANA name such as `Europe/Warsaw`; UTC when absent). `from` is inside the window, `to` is not. A window whose `to` is earlier than its `from` runs over midnight, e.g. `22:00` to `06:00`.
+- Inside the window `routing` is used as it is.
+- Outside the window everyone the routing names is notified once on the `outsideWindow` channel instead, if they have the address that channel needs. A bare `address` target stays only when the channel delivers to that kind of address. Throttling applies as usual.
+- With `outsideWindow` null, nothing is sent outside the window. Each notification held back is recorded in the timeline as `NOTIFICATION_SUPPRESSED` with the reason `deliveryWindow`.
+- The alert itself is always created and shown in the live feed, and a resend that a person asks for goes out on the rule's own channels at any hour.
 
 ## runbookId
 

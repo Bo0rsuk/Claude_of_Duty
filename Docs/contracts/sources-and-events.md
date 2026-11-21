@@ -16,7 +16,7 @@ connector (webhook | http-pull | kafka)  ->  RawRecord on Kinesis
   "orgId": "org-1",
   "name": "Payments API",
   "enabled": true,
-  "connector": { "type": "http-pull", "url": "https://datasource.waw-out.pl/api/events", "intervalSeconds": 5,
+  "connector": { "type": "http-pull", "url": "https://datasource.squawk.com.pl/api/events", "intervalSeconds": 5,
                  "itemsPath": "items", "cursorParam": "after", "cursorFrom": "body:next_after" },
   "parser": { "format": "json", "eventTime": "timestamp", "timeFormat": "iso8601",
               "level": "level", "message": "message" },
@@ -40,7 +40,7 @@ A new connector type is one class implementing the connector interface in the wo
 
 | Field | Applies to | Meaning |
 |---|---|---|
-| `format` | all | `json` or `regex` |
+| `format` | all | `json`, `regex` or `kv` (a line of `key=value` pairs, values with spaces in double quotes) |
 | `pattern` | `regex` | Java regular expression with named groups. Each group becomes a field. Group names allow letters and digits only, so use `traceId`, not `trace_id`. |
 | `split` | `json` | Path to an array. Each element becomes its own event, with the parent's other fields copied in. |
 | `eventTime` | all | Path (json) or group name (regex) holding the event time. Missing or unparsable: `receivedAt` is used. |
@@ -106,7 +106,7 @@ against real lines from the mock.
 ### JSON API - `GET /api/events`
 
 ```json
-{ "connector": { "type": "http-pull", "url": "https://datasource.waw-out.pl/api/events", "intervalSeconds": 5,
+{ "connector": { "type": "http-pull", "url": "https://datasource.squawk.com.pl/api/events", "intervalSeconds": 5,
                  "itemsPath": "items", "cursorParam": "after", "cursorFrom": "body:next_after" },
   "parser": { "format": "json", "eventTime": "timestamp", "timeFormat": "iso8601", "level": "level", "message": "message" } }
 ```
@@ -116,7 +116,7 @@ Fields: `seq`, `id`, `service`, `host`, `code`, `http.method`, `http.path`, `htt
 ### Application log - `GET /logs`
 
 ```json
-{ "connector": { "type": "http-pull", "url": "https://datasource.waw-out.pl/logs", "intervalSeconds": 5,
+{ "connector": { "type": "http-pull", "url": "https://datasource.squawk.com.pl/logs", "intervalSeconds": 5,
                  "cursorParam": "after", "cursorFrom": "header:X-Next-After" },
   "parser": { "format": "regex", "eventTime": "timestamp", "timeFormat": "yyyy-MM-dd HH:mm:ss,SSS", "level": "level", "message": "message",
               "pattern": "^(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3}) (?<level>\\w+)\\s+\\[(?<service>[^\\]]+)\\] \\[(?<host>[^\\]]+)\\] \\[trace=(?<traceId>[^\\]]+)\\] (?<code>\\S+) - (?<message>.*)$" } }
@@ -127,7 +127,7 @@ Fields: `service`, `host`, `traceId`, `code`.
 ### Access log - `GET /logs/access`
 
 ```json
-{ "connector": { "type": "http-pull", "url": "https://datasource.waw-out.pl/logs/access", "intervalSeconds": 5,
+{ "connector": { "type": "http-pull", "url": "https://datasource.squawk.com.pl/logs/access", "intervalSeconds": 5,
                  "cursorParam": "after", "cursorFrom": "header:X-Next-After" },
   "parser": { "format": "regex", "eventTime": "timestamp", "timeFormat": "dd/MMM/yyyy:HH:mm:ss Z",
               "pattern": "^(?<clientIp>\\S+) \\S+ \\S+ \\[(?<timestamp>[^\\]]+)\\] \"(?<method>\\S+) (?<path>\\S+) [^\"]*\" (?<status>\\d{3}) (?<bytes>\\d+) \"[^\"]*\" \"(?<userAgent>[^\"]*)\" (?<requestTime>[\\d.]+)$" } }
@@ -140,7 +140,7 @@ Rules for it filter on `status` or `requestTime`.
 ### Kafka - topic `infra.events`
 
 ```json
-{ "connector": { "type": "kafka", "bootstrapServers": "datasource.waw-out.pl:9092", "topic": "infra.events", "groupId": "claude-of-duty" },
+{ "connector": { "type": "kafka", "bootstrapServers": "datasource.squawk.com.pl:9092", "topic": "infra.events", "groupId": "claude-of-duty" },
   "parser": { "format": "json", "eventTime": "ts", "timeFormat": "epoch_millis", "level": "severity", "message": "summary" } }
 ```
 

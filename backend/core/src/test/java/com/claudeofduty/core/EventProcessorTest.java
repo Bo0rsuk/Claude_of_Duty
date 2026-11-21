@@ -198,7 +198,7 @@ class EventProcessorTest {
     @Test
     void ruleWithoutPresentationFallsBackToRuleNameAndMessage() {
         rules = List.of(new Rule(rule.ruleId(), rule.orgId(), rule.sourceId(), rule.name(), true, rule.match(),
-                Severity.WARNING, null, null, null, null, null, null, null, null));
+                Severity.WARNING, null, null, null, null, null, null, null, null, null));
 
         processor.process(List.of(timeout("payment-api"), timeout("checkout-api")));
 
@@ -212,17 +212,23 @@ class EventProcessorTest {
     }
 
     @Test
-    void alertIsCreatedUnderAnIdThatWasClaimedButNeverWritten() {
+    void eventsForAClaimedAlertThatIsNotStoredYetAreNotLost() {
+        // Another batch claimed this fingerprint a moment ago and has not written its alert yet.
         processor.process(List.of(timeout("payment-api")));
         String claimedId = store.alerts.keySet().iterator().next();
         store.alerts.clear();
         published.clear();
+        notified.clear();
 
-        Summary summary = processor.process(List.of(timeout("payment-api")));
+        Summary summary = processor.process(List.of(timeout("payment-api"), timeout("payment-api")));
 
-        assertEquals(new Summary(1, 1, 1, 1, 0), summary);
+        // The events are stored under the claimed id. Announcing and notifying is left to the batch that claimed it.
+        assertEquals(new Summary(2, 2, 2, 0, 1), summary);
         assertEquals(List.of(claimedId), List.copyOf(store.alerts.keySet()));
-        assertEquals(List.of("alert.created " + claimedId + " x1"), published);
+        assertEquals(2, store.alerts.get(claimedId).count());
+        assertEquals("payment-api: DB_TIMEOUT", store.alerts.get(claimedId).title());
+        assertEquals(List.of("alert.updated " + claimedId + " x2"), published);
+        assertTrue(notified.isEmpty());
     }
 
     private static RawRecord timeout(String service) {
@@ -255,13 +261,8 @@ class EventProcessorTest {
         }
 
         @Override
-        public synchronized void create(Alert alert) {
-            delegate.create(alert);
-        }
-
-        @Override
-        public synchronized Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
-            return delegate.addEvents(orgId, alertId, count, lastSeenAt);
+        public synchronized Alert addEvents(Alert alert) {
+            return delegate.addEvents(alert);
         }
 
         @Override
@@ -282,17 +283,14 @@ class EventProcessorTest {
         }
 
         @Override
-        public void create(Alert alert) {
-            alerts.put(alert.alertId(), alert);
-        }
-
-        @Override
-        public Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
-            return Optional.ofNullable(alerts.computeIfPresent(alertId, (id, a) -> new Alert(
-                    a.alertId(), a.orgId(), a.ruleId(), a.ruleName(), a.sourceId(), a.fingerprint(), a.severity(),
-                    a.status(), a.title(), a.body(), a.fields(), a.count() + count, a.firstSeenAt(), lastSeenAt,
-                    a.sampleEvent(), a.runbookId(), a.assigneeId(), a.acknowledgedBy(), a.acknowledgedAt(),
-                    a.resolvedBy(), a.resolvedAt(), a.timing())));
+        public Alert addEvents(Alert alert) {
+            return alerts.merge(alert.alertId(), alert, (stored, added) -> new Alert(
+                    stored.alertId(), stored.orgId(), stored.ruleId(), stored.ruleName(), stored.sourceId(),
+                    stored.fingerprint(), stored.severity(), stored.status(), stored.title(), stored.body(),
+                    stored.fields(), stored.count() + added.count(), stored.firstSeenAt(), added.lastSeenAt(),
+                    stored.sampleEvent(), stored.runbookId(), stored.assigneeId(), stored.acknowledgedBy(),
+                    stored.acknowledgedAt(), stored.resolvedBy(), stored.resolvedAt(), stored.timing(),
+                    stored.checkedSteps()));
         }
 
         @Override

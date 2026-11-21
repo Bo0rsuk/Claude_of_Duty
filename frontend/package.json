@@ -1,0 +1,39 @@
+{
+  "name": "fans-workspace",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.mjs\""
+  },
+  "dependencies": {
+    "lucide-react": "1.65.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "eslint": "9.39.5",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.2.0"
+  },
+  "imports": {
+    "#*": "./src/*",
+    "#features/admin": "./src/features/admin/index.ts",
+    "#features/alerts": "./src/features/alerts/index.ts",
+    "#features/canvas": "./src/features/canvas/index.ts",
+    "#features/groups-and-runbooks": "./src/features/groups-and-runbooks/index.ts",
+    "#features/members": "./src/features/members/index.ts",
+    "#features/rules": "./src/features/rules/index.ts",
+    "#features/sources": "./src/features/sources/index.ts",
+    "#features/startup": "./src/features/startup/index.ts",
+    "#features/workspace": "./src/features/workspace/index.ts"
+  }
+}

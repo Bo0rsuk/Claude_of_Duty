@@ -18,25 +18,23 @@ Wpiszcie imiona przy literach, zanim zaczniecie.
 ## Stan na 2026-11-21
 
 Zrobione i sprawdzone na AWS:
-- **Źródła danych** - mock pod `https://datasource.waw-out.pl` (JSON API, dwa logi tekstowe, Kafka, webhook) i worker z konektorami HTTP pull i Kafka.
+- **Źródła danych** - mock pod `https://datasource.squawk.com.pl` (JSON API, dwa logi tekstowe, Kafka, webhook) i worker z konektorami HTTP pull i Kafka.
 - **Ingest i processor** - Kinesis -> parser -> reguły -> dedup -> alert w DynamoDB -> AppSync.
 - **REST API** - organizacja i role, alerty z akcjami i timeline, CRUD źródeł, reguł, grup i runbooków, podgląd parsera i reguły.
 - **Asystent reguł** - Google Gemini (`gemini-flash-lite-latest`), klucz w SSM.
 - **Powiadomienia** - routing, grupy, szablony per kanał, throttling, SMS i email dochodzą, voice symulowany, ponawianie przez DLQ.
-- **Load test** - 200 osobnych alertów/s bez strat (end-to-end p99 574 ms), 5000 identycznych eventów daje 1 alert. Wyniki i ograniczenia: `loadtest/README.md`.
+- **Load test** - 200 pojedynczych żądań/s bez odrzuceń i strat (end-to-end p50 193 ms, p99 338 ms), burst 1000 eventów/s daje 1 alert z dokładnym licznikiem. Ingest idzie teraz bez Lambdy. Wyniki i ograniczenia: `loadtest/README.md`.
 - **Dane demo** - organizacja `demo` (kod `DEMO-2026`): pięć źródeł, osiem reguł, cztery runbooki.
 
-Zrobione, czeka na wdrożenie:
-- **Push** - kanał `push` (Web Push, szyfrowanie zgodne z RFC 8291), rejestracja urządzeń, strona testowa.
-- **Zamknięte kanały live feedu** - subskrypcja tylko do kanałów własnej organizacji, na podstawie atrybutu `custom:orgId` w tokenie Cognito.
-- **Ponowna wysyłka powiadomień** - `POST /alerts/{alertId}/resend`.
+- **Push, zamknięte kanały live feedu, ponowna wysyłka** - wdrożone; push sprawdzony na telefonie, izolacja kanałów na 8 przypadkach.
+- **Frontend spięty z backendem** - `frontend/` po zbudowaniu z `.env` działa na prawdziwych danych: logowanie Cognito, feed na żywo, akcje na alercie, reguły z asystentem AI, źródła, grupy, runbooki, członkowie, push. Bez `.env` zostaje tryb demo. Opublikowany na CloudFront (`terraform -chdir=infra/app output frontend_url`), wdrożenie: `scripts/deploy-frontend.sh`.
 
-Dla frontendu: `Docs/frontend-integration/` - instrukcja, typy TypeScript, klient live feedu, moduł push i service worker.
+Sprawdzone w przeglądarce (headless, na opublikowanej stronie): logowanie, feed i nowy alert bez odświeżania, acknowledge, timeline, notatka, lista reguł i źródeł, kod zaproszenia, cały edytor reguły (propozycja AI, test, zapis, edycja, błąd walidacji, usunięcie). Jeszcze nie przeklikane: kreator źródła, CRUD grup i runbooków, zmiana roli, rejestracja nowego konta, ekran dołączenia do zespołu, przycisk push w menu konta.
 
 Najbliższe kroki:
-1. `terraform apply`, wygenerować klucze push (`VapidKeys`), sprawdzić izolację kanałów i push na telefonie.
-2. Frontend według instrukcji (C1-C13).
-3. Końcowe pomiary po decyzji o limicie Lambdy (A12, A14), ewentualnie ingest bez Lambdy.
+1. `terraform apply` (parser `kv` w API, outputy dla skryptu wdrożenia frontendu), potem przeklikać listę powyżej.
+2. Scenariusz demo przećwiczony na wdrożonym środowisku.
+3. README z diagramem i sekcją o rozszerzaniu, scenariusz demo, wykres wyników do prezentacji.
 
 ## Przepływ danych (dla orientacji)
 
@@ -114,11 +112,11 @@ Szkice K1-K7 są gotowe. Odhaczcie je po wspólnym przeglądzie.
 
 ### Blok 3 (6:30-8:30)
 - [x] A11: asystent filtra - `POST /ai/rule-suggestion` na Google Gemini (`gemini-flash-lite-latest`, klucz w SSM): cel w języku naturalnym + pola z ostatnich eventów źródła -> warunki reguły, walidowane i od razu sprawdzone na ostatnich eventach. Sprawdzony na prawdziwym modelu, czeka na wdrożenie
-- [ ] A12: pomiary i strojenie - pomiar bazowy zrobiony (`loadtest/README.md`); optymalizacje (SnapStart, równoległy zapis alertów, podział współbieżności) czekają na `terraform apply` i ponowny pomiar
+- [x] A12: pomiary i strojenie - trzy rundy pomiarów w `loadtest/README.md`; ingest bez Lambdy (API Gateway -> Kinesis), SnapStart z rozgrzewaniem, równoległy i atomowy zapis alertów
 - [ ] A13: powiadomienia push (kanał `push`, rejestracja urządzeń, strona testowa `demo/push-test/`) - napisane i przetestowane lokalnie, czeka na wdrożenie i próbę na prawdziwym telefonie. Poza tym, jeśli starczy czasu: prawdziwy kanał voice, RabbitMQ jako kolejne źródło
 
 ### Blok 4 (8:30-10:00)
-- [ ] A14: finalne load testy, tabela i wykres p50/p99 do prezentacji, opis metodologii pomiaru
+- [ ] A14: wyniki końcowe są w `loadtest/README.md` (200 żądań/s bez strat, p50 193 ms, p99 338 ms; burst 1000/s -> 1 alert); zostaje wykres do prezentacji
 
 ---
 

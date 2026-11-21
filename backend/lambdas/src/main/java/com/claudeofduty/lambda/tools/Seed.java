@@ -1,7 +1,9 @@
 package com.claudeofduty.lambda.tools;
 
 import com.claudeofduty.core.json.Json;
+import com.claudeofduty.core.model.Member;
 import com.claudeofduty.core.model.Organization;
+import com.claudeofduty.core.model.RecipientGroup;
 import com.claudeofduty.core.model.Rule;
 import com.claudeofduty.core.model.Runbook;
 import com.claudeofduty.core.model.Source;
@@ -17,8 +19,9 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 /**
  * Loads demo data into DynamoDB, standing in for the UI until the API exists.
- * Reads orgs.json, sources.json, rules.json and runbooks.json from a directory. Each is an
- * array of objects in the contract shape; a missing file is skipped.
+ * Reads orgs.json, sources.json, rules.json, runbooks.json, members.json and groups.json from a
+ * directory. Each is an array of objects in the contract shape; a missing file is skipped.
+ * Seeded members are people to show in lists and route to. They have no account and cannot sign in.
  *
  * <pre>java -cp backend/lambdas/target/lambdas.jar com.claudeofduty.lambda.tools.Seed demo/seed</pre>
  */
@@ -26,14 +29,15 @@ public final class Seed {
 
     /** File name (without .json) and table suffix, mapped to the type its entries must have. */
     private static final Map<String, Class<?>> FILES = Map.of(
-            "orgs", Organization.class, "sources", Source.class, "rules", Rule.class, "runbooks", Runbook.class);
+            "orgs", Organization.class, "sources", Source.class, "rules", Rule.class, "runbooks", Runbook.class,
+            "members", Member.class, "groups", RecipientGroup.class);
 
     private Seed() {
     }
 
     public static void main(String[] args) throws IOException {
         if (args.length != 1) {
-            System.err.println("Usage: Seed <directory with orgs.json, sources.json, rules.json, runbooks.json>");
+            System.err.println("Usage: Seed <directory with orgs.json, sources.json, rules.json, runbooks.json, members.json, groups.json>");
             System.exit(2);
         }
         try (DynamoDbClient dynamoDb = AwsClients.dynamoDb()) {

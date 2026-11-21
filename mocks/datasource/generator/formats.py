@@ -30,6 +30,9 @@ SCENARIOS = [
     Scenario("FATAL", "OUT_OF_MEMORY", "OutOfMemoryError: Java heap space", 500, 0.5),
 ]
 BURST_SCENARIO = SCENARIOS[4]
+# Everyday traffic, and the failures that an alerting rule is meant to catch.
+CALM_SCENARIOS = [s for s in SCENARIOS if s.level in ("INFO", "WARN")]
+INCIDENT_SCENARIOS = [s for s in SCENARIOS if s.level in ("ERROR", "FATAL")]
 
 ENDPOINTS = [
     ("GET", "/v1/orders"),
@@ -58,9 +61,13 @@ class Record:
     trace_id: str
 
 
+def pick(scenarios: list[Scenario]) -> Scenario:
+    return random.choices(scenarios, weights=[s.weight for s in scenarios])[0]
+
+
 def make_record(services: list[str], scenario: Scenario | None = None) -> Record:
     """Build one random record; pass `scenario` to force a specific incident."""
-    scenario = scenario or random.choices(SCENARIOS, weights=[s.weight for s in SCENARIOS])[0]
+    scenario = scenario or pick(SCENARIOS)
     service = random.choice(services)
     method, path = random.choice(ENDPOINTS)
     slow = scenario.level in SLOW_LEVELS

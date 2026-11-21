@@ -10,3 +10,13 @@
 		reverse_proxy generator:8000
 	}
 }
+
+# The web application's own domain. The frontend is hosted on CloudFront, and
+# the root of a domain can only hold an A record, so this instance takes the
+# requests and passes them on. Without FRONTEND_ADDRESS the block listens on
+# a port that is not published.
+{$FRONTEND_ADDRESS::8080} {
+	reverse_proxy {$FRONTEND_UPSTREAM:http://generator:8000} {
+		header_up Host {upstream_hostport}
+	}
+}

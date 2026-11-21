@@ -52,7 +52,7 @@ public final class RulePreviewService {
     }
 
     Preview preview(List<NormalizedEvent> events, Match match) {
-        Rule rule = new Rule(null, null, null, null, true, match, null, null, null, null, null, null, null, null, null);
+        Rule rule = new Rule(null, null, null, null, true, match, null, null, null, null, null, null, null, null, null, null);
         List<NormalizedEvent> matching = events.stream().filter(event -> matcher.matches(rule, event)).toList();
         return new Preview(matching.size(), events.size(), matching.stream().limit(MAX_SAMPLES).toList());
     }
