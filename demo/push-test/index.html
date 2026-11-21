@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude of Duty - push test</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+    input, button { font: inherit; padding: 0.5rem; margin: 0.25rem 0; width: 100%; box-sizing: border-box; }
+    button { cursor: pointer; }
+    #log { white-space: pre-wrap; background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; min-height: 4rem; }
+  </style>
+</head>
+<body>
+  <h1>Push notification test</h1>
+  <p>Signs in, registers this device for push and shows what the server knows about it.
+     On iPhone, first add this page to the home screen and open it from there.</p>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="enable">Sign in and enable push on this device</button>
+  <button id="disable">Disable push on this device</button>
+  <h2>Log</h2>
+  <div id="log"></div>
+
+  <script type="module">
+    const log = (line) => { document.getElementById('log').textContent += line + '\n'; };
+    const config = await (await fetch('config.json')).json();
+
+    async function signIn() {
+      const response = await fetch(`https://cognito-idp.${config.region}.amazonaws.com/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth' },
+        body: JSON.stringify({ AuthFlow: 'USER_PASSWORD_AUTH', ClientId: config.userPoolClientId,
+          AuthParameters: { USERNAME: document.getElementById('email').value, PASSWORD: document.getElementById('password').value } }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Sign-in failed');
+      return result.AuthenticationResult.IdToken;
+    }
+
+    async function api(token, method, path, body) {
+      const response = await fetch(config.apiUrl + path, {
+        method, headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const payload = response.status === 204 ? null : await response.json();
+      if (!response.ok) throw new Error(payload.error.message);
+      return payload;
+    }
+
+    const toBytes = (value) => Uint8Array.from(
+      atob(value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+
+    document.getElementById('enable').onclick = async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('This browser does not support push here');
+        const permission = await Notification.requestPermission();
+        log(`permission: ${permission}`);
+        if (permission !== 'granted') return;
+        const token = await signIn();
+        const profile = await api(token, 'GET', '/me');
+        log(`signed in as ${profile.email}, user id ${profile.userId}, organization ${profile.org ? profile.org.orgId : 'none'}`);
+        const registration = await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.ready;
+        const { publicKey } = await api(token, 'GET', '/push/public-key');
+        const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(publicKey) });
+        const stored = await api(token, 'POST', '/me/push-subscriptions', subscription.toJSON());
+        log(`registered device ${stored.subscriptionId} at ${new URL(stored.endpoint).host}`);
+        log('Now trigger an alert of a rule that routes "push" to this user.');
+      } catch (error) { log(`error: ${error.message}`); }
+    };
+
+    document.getElementById('disable').onclick = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = registration && await registration.pushManager.getSubscription();
+        if (!subscription) return log('this device is not subscribed');
+        const token = await signIn();
+        const { items } = await api(token, 'GET', '/me/push-subscriptions');
+        const mine = items.find((item) => item.endpoint === subscription.endpoint);
+        await subscription.unsubscribe();
+        if (mine) await api(token, 'DELETE', `/me/push-subscriptions/${mine.subscriptionId}`);
+        log('push disabled on this device');
+      } catch (error) { log(`error: ${error.message}`); }
+    };
+  </script>
+</body>
+</html>

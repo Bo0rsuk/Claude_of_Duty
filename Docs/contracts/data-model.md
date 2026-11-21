@@ -17,6 +17,7 @@ a single-partition query scoped to the caller's organization.
 | `cod-dedup` | `fingerprint` | - | - | Pointer from fingerprint to the active `alertId` |
 | `cod-counters` | `counterKey` | - | TTL on `expiresAt` | Throttling counters |
 | `cod-recent-events` | `sourceId` | `eventKey` | TTL on `expiresAt` | Sample of recent events for the rule preview |
+| `cod-push-subscriptions` | `userId` | `subscriptionId` | - | Devices on which a user enabled push notifications |
 
 Item shapes are the JSON objects from the other contract files, stored as-is.
 
@@ -70,4 +71,4 @@ someone outside the organization.
 
 - **`cod-dedup`:** the item is `{ fingerprint, alertId, orgId }`. Created with `attribute_not_exists(fingerprint)`, deleted when the alert is resolved.
 - **`cod-counters`:** `counterKey` is described in [alerts.md](alerts.md). `expiresAt` is the window end plus one hour, in epoch seconds.
-- **`cod-recent-events`:** `eventKey` is `<eventTime>#<eventId>`. The processor writes a sample, at most a few events per second per source, and items expire after one hour. This table exists only for the rule preview and is the first thing to drop if time runs out.
+- **`cod-recent-events`:** the partition key attribute `sourceId` holds `<orgId>/<sourceId>`, `eventKey` is `<eventTime>#<eventId>`, and the event itself is under `event`. The processor writes a sample, at most 5 events per second per source, and items expire after one hour. The table feeds the rule preview and the rule assistant.

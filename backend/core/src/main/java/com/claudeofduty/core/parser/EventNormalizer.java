@@ -4,6 +4,7 @@ import com.claudeofduty.core.model.Level;
 import com.claudeofduty.core.model.NormalizedEvent;
 import com.claudeofduty.core.model.RawRecord;
 import com.claudeofduty.core.model.Source.ParserConfig;
+import com.claudeofduty.core.parser.Parser.ParsedEvent;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -26,29 +27,30 @@ public final class EventNormalizer {
     }
 
     public List<NormalizedEvent> normalize(RawRecord record, ParserConfig config) {
-        List<Map<String, Object>> parsed = parse(record.payload(), config);
+        List<ParsedEvent> parsed = parse(record.payload(), config);
         List<NormalizedEvent> events = new ArrayList<>(parsed.size());
         for (int index = 0; index < parsed.size(); index++) {
             // Derived from the record id, so a retried batch yields the same event ids.
             String eventId = record.recordId() + "-" + index;
-            events.add(toEvent(eventId, record, new LinkedHashMap<>(parsed.get(index)), config));
+            ParsedEvent event = parsed.get(index);
+            events.add(toEvent(eventId, record, new LinkedHashMap<>(event.fields()), event.raw(), config));
         }
         return events;
     }
 
-    private List<Map<String, Object>> parse(String payload, ParserConfig config) {
+    private List<ParsedEvent> parse(String payload, ParserConfig config) {
         if (config == null || config.format() == null) {
-            return List.of(Map.of());
+            return List.of(new ParsedEvent(Map.of(), payload));
         }
         try {
             return parsers.computeIfAbsent(config, registry::create).parse(payload);
         } catch (UnparsablePayloadException | IllegalArgumentException e) {
-            return List.of(Map.of());
+            return List.of(new ParsedEvent(Map.of(), payload));
         }
     }
 
     private static NormalizedEvent toEvent(
-            String eventId, RawRecord record, Map<String, Object> fields, ParserConfig config) {
+            String eventId, RawRecord record, Map<String, Object> fields, String raw, ParserConfig config) {
         Object time = take(fields, config == null ? null : config.eventTime());
         Object level = take(fields, config == null ? null : config.level());
         Object message = take(fields, config == null ? null : config.message());
@@ -62,9 +64,9 @@ public final class EventNormalizer {
                 eventTime,
                 record.receivedAt(),
                 Level.parse(level == null ? null : level.toString()),
-                message == null ? record.payload() : message.toString(),
+                message == null ? raw : message.toString(),
                 fields,
-                record.payload());
+                raw);
     }
 
     private static Object take(Map<String, Object> fields, String key) {

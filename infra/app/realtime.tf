@@ -32,9 +32,46 @@ resource "aws_appsync_api" "events" {
 }
 
 # Channels from Docs/contracts/api.md: /alerts/{orgId} and /notifications/{orgId}/{userId}.
-resource "aws_appsync_channel_namespace" "this" {
-  for_each = toset(["alerts", "notifications"])
+#
+# The handlers run on every subscription, after AppSync has verified the
+# Cognito token. They admit a subscriber only to the channels of the
+# organization named in the token (custom:orgId), and for notifications only
+# to the subscriber's own channel. A wildcard such as /alerts/* never matches.
+# Publishing is not affected: only the Lambdas can publish, through IAM.
+locals {
+  channel_handlers = {
+    alerts = <<-EOT
+      import { util } from '@aws-appsync/utils'
 
-  api_id = aws_appsync_api.events.api_id
-  name   = each.key
+      export function onSubscribe(ctx) {
+        const claims = (ctx.identity && ctx.identity.claims) || {}
+        const orgId = claims['custom:orgId']
+        const segments = ctx.info.channel.segments
+        if (!orgId || segments.length !== 2 || segments[1] !== orgId) {
+          util.unauthorized()
+        }
+      }
+    EOT
+
+    notifications = <<-EOT
+      import { util } from '@aws-appsync/utils'
+
+      export function onSubscribe(ctx) {
+        const claims = (ctx.identity && ctx.identity.claims) || {}
+        const orgId = claims['custom:orgId']
+        const segments = ctx.info.channel.segments
+        if (!orgId || segments.length !== 3 || segments[1] !== orgId || segments[2] !== ctx.identity.sub) {
+          util.unauthorized()
+        }
+      }
+    EOT
+  }
+}
+
+resource "aws_appsync_channel_namespace" "this" {
+  for_each = local.channel_handlers
+
+  api_id        = aws_appsync_api.events.api_id
+  name          = each.key
+  code_handlers = var.events_channel_isolation ? each.value : null
 }

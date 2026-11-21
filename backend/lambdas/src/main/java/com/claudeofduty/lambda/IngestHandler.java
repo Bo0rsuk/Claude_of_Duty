@@ -8,9 +8,10 @@ import com.claudeofduty.core.model.RawRecord;
 import com.claudeofduty.core.model.Source;
 import com.claudeofduty.core.port.RawRecordSink;
 import com.claudeofduty.core.port.SourceLookup;
-import com.claudeofduty.lambda.aws.AwsClients;
-import com.claudeofduty.lambda.aws.DynamoSourceLookup;
-import com.claudeofduty.lambda.aws.KinesisRawRecordSink;
+import com.claudeofduty.aws.Env;
+import com.claudeofduty.aws.AwsClients;
+import com.claudeofduty.aws.DynamoSourceLookup;
+import com.claudeofduty.aws.KinesisRawRecordSink;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
@@ -28,6 +29,7 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
 
     private static final String TOKEN_HEADER = "x-ingest-token";
     private static final String TOKEN_PARAMETER = "token";
+    private static final String PRIMING = "priming";
 
     private final SourceLookup sources;
     private final RawRecordSink sink;
@@ -37,6 +39,11 @@ public class IngestHandler implements RequestHandler<APIGatewayV2HTTPEvent, APIG
         this(new DynamoSourceLookup(AwsClients.dynamoDb()),
                 new KinesisRawRecordSink(AwsClients.kinesis(), Env.required("STREAM_NAME")),
                 Clock.systemUTC());
+        // The record belongs to no source, so the processor skips it.
+        Priming.run(
+                () -> sources.find(PRIMING, PRIMING),
+                () -> sink.publish(new RawRecord(PRIMING + "-" + UUID.randomUUID(), PRIMING, PRIMING, clock.instant(), "{}")),
+                () -> HttpResponses.json(202, Map.of("recordId", PRIMING)));
     }
 
     IngestHandler(SourceLookup sources, RawRecordSink sink, Clock clock) {

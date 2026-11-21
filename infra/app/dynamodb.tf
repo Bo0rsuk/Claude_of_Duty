@@ -13,6 +13,8 @@ locals {
     dedup          = { hash_key = "fingerprint" }
     counters       = { hash_key = "counterKey", ttl_attribute = "expiresAt" }
     recent-events  = { hash_key = "sourceId", range_key = "eventKey", ttl_attribute = "expiresAt" }
+    # One item per device on which a user enabled push notifications.
+    push-subscriptions = { hash_key = "userId", range_key = "subscriptionId" }
   }
 }
 

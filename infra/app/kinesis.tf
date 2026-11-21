@@ -31,7 +31,7 @@ resource "aws_lambda_event_source_mapping" "processor" {
   count = var.stream_enabled ? 1 : 0
 
   event_source_arn  = aws_kinesis_stream_consumer.processor[0].arn
-  function_name     = aws_lambda_function.this["processor"].arn
+  function_name     = aws_lambda_alias.live["processor"].arn
   starting_position = "LATEST"
 
   batch_size                         = var.processor_batch_size

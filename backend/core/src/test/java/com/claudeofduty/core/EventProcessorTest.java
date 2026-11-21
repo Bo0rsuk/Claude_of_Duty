@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.claudeofduty.core.alerting.EventProcessor;
 import com.claudeofduty.core.alerting.EventProcessor.Summary;
 import com.claudeofduty.core.model.Alert;
+import com.claudeofduty.core.model.NormalizedEvent;
 import com.claudeofduty.core.model.RawRecord;
 import com.claudeofduty.core.model.Rule;
 import com.claudeofduty.core.model.Severity;
@@ -16,6 +17,7 @@ import com.claudeofduty.core.parser.EventNormalizer;
 import com.claudeofduty.core.parser.ParserRegistry;
 import com.claudeofduty.core.port.AlertPublisher;
 import com.claudeofduty.core.port.AlertStore;
+import com.claudeofduty.core.port.RecentEvents;
 import com.claudeofduty.core.rules.Operators;
 import com.claudeofduty.core.rules.RuleMatcher;
 import java.time.Clock;
@@ -27,6 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 
 /** Runs the pipeline with the rule and the JSON API source from Docs/contracts against in-memory stores. */
@@ -38,14 +42,31 @@ class EventProcessorTest {
     private final Rule rule = ContractDocs.example("rules.md", "\"match\"", Rule.class);
     private final InMemoryAlertStore store = new InMemoryAlertStore();
     private final List<String> published = new ArrayList<>();
+    private final List<String> notified = new ArrayList<>();
     private Source source = source(true);
     private List<Rule> rules = List.of(rule);
 
+    private final List<NormalizedEvent> sampled = new ArrayList<>();
+    private final RecentEvents recentEvents = new RecentEvents() {
+        @Override
+        public void saveAll(List<NormalizedEvent> events) {
+            sampled.addAll(events);
+        }
+
+        @Override
+        public List<NormalizedEvent> latest(String orgId, String sourceId, int limit) {
+            return sampled;
+        }
+    };
+
     private final EventProcessor processor = new EventProcessor(
-            (orgId, sourceId) -> sourceId.equals(source.sourceId()) ? Optional.of(source) : Optional.empty(),
-            (orgId, sourceId) -> rules,
-            store,
-            (type, alert) -> published.add(type + " " + alert.alertId() + " x" + alert.count()),
+            new EventProcessor.Ports(
+                    (orgId, sourceId) -> sourceId.equals(source.sourceId()) ? Optional.of(source) : Optional.empty(),
+                    (orgId, sourceId) -> rules,
+                    store,
+                    (type, alert) -> published.add(type + " " + alert.alertId() + " x" + alert.count()),
+                    (alert, alertRule, alertSource) -> notified.add(alert.alertId() + " via " + alertRule.ruleId()),
+                    recentEvents),
             new EventNormalizer(ParserRegistry.withDefaults()),
             new RuleMatcher(Operators.withDefaults()),
             "https://app.example.pl",
@@ -77,6 +98,16 @@ class EventProcessorTest {
     }
 
     @Test
+    void aFewEventsPerSecondOfEachSourceAreKeptAsARecentSample() {
+        processor.process(Collections.nCopies(500, timeout("payment-api")));
+        processor.process(List.of(record("src-1", event("payment-api", "INFO", "REQUEST_OK", 20))));
+
+        // The clock is fixed, so both batches fall into the same second: five events in total, matching or not.
+        assertEquals(5, sampled.size());
+        assertEquals("payment-api", sampled.get(0).fields().get("service"));
+    }
+
+    @Test
     void laterBatchesAreAbsorbedByTheSameAlert() {
         processor.process(Collections.nCopies(3, timeout("payment-api")));
         Summary second = processor.process(Collections.nCopies(2, timeout("payment-api")));
@@ -87,6 +118,8 @@ class EventProcessorTest {
         assertEquals(5, alert.count());
         assertEquals(List.of("alert.created " + alert.alertId() + " x3", "alert.updated " + alert.alertId() + " x5"),
                 published);
+        // People are notified once, when the alert is created, not for every absorbed batch.
+        assertEquals(List.of(alert.alertId() + " via " + rule.ruleId()), notified);
         assertEquals(1, store.timeline.size());
     }
 
@@ -99,6 +132,41 @@ class EventProcessorTest {
         assertEquals(List.of("payment-api: DB_TIMEOUT", "checkout-api: DB_TIMEOUT"),
                 store.alerts.values().stream().map(Alert::title).toList());
         assertEquals(List.of(2L, 1L), store.alerts.values().stream().map(Alert::count).toList());
+    }
+
+    @Test
+    void groupsStoredConcurrentlyGiveTheSameResult() {
+        ExecutorService threads = Executors.newFixedThreadPool(8);
+        try {
+            EventProcessor concurrent = new EventProcessor(
+                    new EventProcessor.Ports(
+                            (orgId, sourceId) -> Optional.of(source),
+                            (orgId, sourceId) -> rules,
+                            new ThreadSafeStore(store),
+                            (type, alert) -> { },
+                            (alert, alertRule, alertSource) -> { },
+                            RecentEvents.NONE),
+                    new EventNormalizer(ParserRegistry.withDefaults()),
+                    new RuleMatcher(Operators.withDefaults()),
+                    "https://app.example.pl",
+                    Clock.fixed(NOW, ZoneOffset.UTC),
+                    threads);
+            List<RawRecord> records = new ArrayList<>();
+            for (int service = 0; service < 200; service++) {
+                records.add(timeout("service-" + service));
+                records.add(timeout("service-" + service));
+            }
+
+            Summary summary = concurrent.process(records);
+
+            assertEquals(new Summary(400, 400, 400, 200, 0), summary);
+            assertEquals(200, store.alerts.size());
+            assertTrue(store.alerts.values().stream().allMatch(alert -> alert.count() == 2));
+            assertEquals(new Summary(400, 400, 400, 0, 200), concurrent.process(records));
+            assertTrue(store.alerts.values().stream().allMatch(alert -> alert.count() == 4));
+        } finally {
+            threads.shutdownNow();
+        }
     }
 
     @Test
@@ -176,6 +244,30 @@ class EventProcessorTest {
     private static Source source(boolean enabled) {
         Source preset = ContractDocs.mockPresets().get(0);
         return new Source("src-1", "org-1", "Payments API", enabled, preset.connector(), preset.parser(), null, NOW, NOW);
+    }
+
+    /** Serializes access to the in-memory store, the way DynamoDB's conditional writes do for the real one. */
+    private record ThreadSafeStore(InMemoryAlertStore delegate) implements AlertStore {
+
+        @Override
+        public synchronized String claim(String orgId, String fingerprint, String candidateAlertId) {
+            return delegate.claim(orgId, fingerprint, candidateAlertId);
+        }
+
+        @Override
+        public synchronized void create(Alert alert) {
+            delegate.create(alert);
+        }
+
+        @Override
+        public synchronized Optional<Alert> addEvents(String orgId, String alertId, long count, Instant lastSeenAt) {
+            return delegate.addEvents(orgId, alertId, count, lastSeenAt);
+        }
+
+        @Override
+        public synchronized void appendTimeline(TimelineEntry entry) {
+            delegate.appendTimeline(entry);
+        }
     }
 
     private static final class InMemoryAlertStore implements AlertStore {

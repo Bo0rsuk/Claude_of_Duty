@@ -22,21 +22,22 @@ final class JsonParser implements Parser {
     }
 
     @Override
-    public List<Map<String, Object>> parse(String payload) {
+    public List<ParsedEvent> parse(String payload) {
         JsonNode root = read(payload);
         Map<String, Object> fields = new LinkedHashMap<>();
         flatten(root, "", fields);
 
         JsonNode elements = splitPath == null ? null : at(root, splitPath);
         if (elements == null || !elements.isArray()) {
-            return List.of(fields);
+            return List.of(new ParsedEvent(fields, payload));
         }
         fields.remove(splitPath);
-        List<Map<String, Object>> events = new ArrayList<>();
+        List<ParsedEvent> events = new ArrayList<>();
         for (JsonNode element : elements) {
             Map<String, Object> event = new LinkedHashMap<>(fields);
             flatten(element, "", event);
-            events.add(event);
+            // Each event keeps only its own element as raw text, not the whole payload it arrived in.
+            events.add(new ParsedEvent(event, element.toString()));
         }
         return events;
     }

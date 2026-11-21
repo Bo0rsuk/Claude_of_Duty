@@ -92,9 +92,10 @@ The history shown in the alert window, oldest first.
 | `type` | Written when | `detail` |
 |---|---|---|
 | `CREATED` | The alert is created | `ruleName`, `severity` |
-| `NOTIFICATION_SENT` | A provider accepted the notification | `channel`, `recipient`, `attempt`, `deliveredAt` |
-| `NOTIFICATION_FAILED` | A delivery attempt failed | `channel`, `recipient`, `attempt`, `error`, `final` (true when no retries remain) |
+| `NOTIFICATION_SENT` | A provider accepted the notification | `channel`, `recipient`, `attempt`, `deliveredAt`, `latencyMs`, provider details such as `messageId` |
+| `NOTIFICATION_FAILED` | A delivery attempt failed | `channel`, `recipient`, `attempt`, `error`, `final` (true when no retries remain or retrying cannot help, e.g. a push to a user with no registered device) |
 | `NOTIFICATION_SUPPRESSED` | Throttling blocked a notification | `channel`, `recipient`, `reason` (`perRule` or `perRecipient`) |
+| `NOTIFICATIONS_RESENT` | A user asked to notify everyone again | `notifications` (how many were queued) |
 | `ACKNOWLEDGED` | A user acknowledged the alert | none |
 | `ASSIGNED` | The alert was passed to a user | `assigneeId`, `assigneeName` |
 | `RESOLVED` | A user resolved the alert | none |
@@ -111,6 +112,7 @@ retries on its own. There is one queue per channel, each with a dead-letter queu
   "orgId": "org-1",
   "alertId": "1795208362373-9f3a61c2",
   "channel": "sms",
+  "severity": "CRITICAL",
   "recipient": { "address": "+48600100200", "userId": "usr-1", "name": "Anna Nowak" },
   "subject": null,
   "body": "[CRITICAL] payment-api DB_TIMEOUT x1 https://app.waw-out.pl/alerts/1795208362373-9f3a61c2",
@@ -119,13 +121,23 @@ retries on its own. There is one queue per channel, each with a dead-letter queu
 }
 ```
 
-- `recipient.address` is a phone number in E.164 format, an email address, or the `userId` for the `ui` channel.
-- `subject` is used by `email` only.
+- `recipient.address` is a phone number in E.164 format, an email address, or the `userId` for the `ui` and `push` channels.
+- `subject` is the email subject and the title of the UI pop-up. SMS and voice use `body` only.
+- `attempt` is the delivery round: 1 at first, higher each time the job comes back from the dead-letter queue.
 - `receivedAt` is carried along so the notifier can report ingest-to-delivery latency.
+
+Who gets a job: the rule's `routing` is expanded when the alert is created.
+Groups become their members, each channel picks the address it needs (phone,
+email or user id), people without that address are skipped, and someone
+reached through several routes gets one job per channel.
 
 Delivery and retries:
 
-1. The notifier takes the job and calls the provider. Success writes `NOTIFICATION_SENT`.
-2. Failure writes `NOTIFICATION_FAILED` and leaves the message on the queue. SQS redelivers it up to 3 times.
-3. After that the message moves to the dead-letter queue. The retry Lambda re-enqueues it with a delay and `attempt` increased, up to 3 more rounds.
+1. The notifier takes the job and calls the provider. Success writes `NOTIFICATION_SENT` with `deliveredAt`, `latencyMs` (from `receivedAt`) and the provider's message id.
+2. Failure writes `NOTIFICATION_FAILED` and leaves the message on the queue. SQS hands it out again after 30 seconds, up to 3 tries per round.
+3. After that the message moves to the dead-letter queue. The notifier re-enqueues it with a delay and `attempt` increased, for up to 3 rounds in total (9 tries).
 4. When those are used up, `NOTIFICATION_FAILED` is written with `final: true`.
+
+The `attempt` in timeline entries counts tries across rounds, from 1 to 9.
+
+Voice is simulated for now: no call is placed and the timeline entry carries `simulated: true`.

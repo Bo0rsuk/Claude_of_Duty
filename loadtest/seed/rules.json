@@ -1,0 +1,48 @@
+[
+  {
+    "ruleId": "loadtest-unique",
+    "orgId": "loadtest",
+    "sourceId": "loadtest-webhook",
+    "name": "Load test: every event is its own alert",
+    "enabled": true,
+    "match": {
+      "mode": "all",
+      "conditions": [{ "field": "labels.scenario", "op": "eq", "value": "unique" }]
+    },
+    "severity": "INFO",
+    "routing": [
+      { "channel": "voice", "target": { "type": "address", "value": "+48000000000" } }
+    ],
+    "presentation": {
+      "title": "Load test event {{labels.event_id}}",
+      "body": "{{message}}",
+      "fields": ["labels.event_id", "labels.run_id"]
+    },
+    "groupBy": ["labels.event_id"],
+    "runbookId": null,
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  },
+  {
+    "ruleId": "loadtest-burst",
+    "orgId": "loadtest",
+    "sourceId": "loadtest-webhook",
+    "name": "Load test: identical events collapse into one alert",
+    "enabled": true,
+    "match": {
+      "mode": "all",
+      "conditions": [{ "field": "labels.scenario", "op": "eq", "value": "burst" }]
+    },
+    "severity": "INFO",
+    "routing": [],
+    "presentation": {
+      "title": "Load test burst {{labels.run_id}}",
+      "body": "{{message}}",
+      "fields": ["labels.run_id"]
+    },
+    "groupBy": ["labels.run_id"],
+    "runbookId": null,
+    "createdAt": "2026-11-21T00:00:00.000Z",
+    "updatedAt": "2026-11-21T00:00:00.000Z"
+  }
+]

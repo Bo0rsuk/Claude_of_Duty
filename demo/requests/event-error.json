@@ -1,0 +1,10 @@
+{
+  "status": "firing",
+  "alerts": [
+    {
+      "labels": { "alertname": "TEST_1", "severity": "error", "service": "payments", "instance": "pay-1" },
+      "annotations": { "summary": "Disk is full" },
+      "startsAt": "2026-11-21T00:10:00Z"
+    }
+  ]
+}
