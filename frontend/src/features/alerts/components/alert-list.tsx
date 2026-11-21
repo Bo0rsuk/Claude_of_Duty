@@ -39,6 +39,9 @@ export function AlertList() {
     status,
     setStatus,
     account,
+    alertScope,
+    setAlertScope,
+    scopedAlerts,
   } = useWorkspaceContext();
   const [query, setQuery] = useState(""),
     [filters, setFilters] = useState(false),
@@ -54,7 +57,7 @@ export function AlertList() {
     const t = setInterval(() => setPending((n) => Math.min(n + 1, 5)), 60000);
     return () => clearInterval(t);
   }, [paused, mode]);
-  const { rows, groups, entries, groupCount } = buildAlertFeed(data, { query, severity, status, sort });
+  const { rows, groups, entries, groupCount } = buildAlertFeed({ ...data, alerts: scopedAlerts }, { query, severity, status, sort });
   const inspectedGroup = groups.get(openGroup);
   const selected = rows.filter((a) => checked.includes(a.id));
   const allSelected = rows.length > 0 && selected.length === rows.length;
@@ -130,6 +133,16 @@ export function AlertList() {
             {groupCount > 0 && " · " + groupCount + (groupCount === 1 ? " group" : " groups")}
           </span>
         </div>
+        {account && (
+          <div className="segmented feed-scope" role="group" aria-label="Which alerts to show">
+            <button aria-pressed={alertScope === "mine"} onClick={() => setAlertScope("mine")}>
+              Assigned to me
+            </button>
+            <button aria-pressed={alertScope === "all"} onClick={() => setAlertScope("all")}>
+              All alerts
+            </button>
+          </div>
+        )}
         <div className="feed-controls">
           <label className="search">
             <Search />
@@ -343,7 +356,12 @@ export function AlertList() {
               : "New demo alerts will appear here when the live feed is running."}
           </Empty>
         )}
-        {data.alerts.length > 0 && !rows.length && (
+        {data.alerts.length > 0 && !scopedAlerts.length && (
+          <Empty title="No alerts are assigned to you" action={<button onClick={() => setAlertScope("all")}>Show all alerts</button>}>
+            You see an alert here when you own it or when its rule notifies you or one of your groups.
+          </Empty>
+        )}
+        {scopedAlerts.length > 0 && !rows.length && (
           <Empty
             title="No matching alerts"
             action={

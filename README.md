@@ -1,177 +1,209 @@
 # Squawk
 
-Alerting platform in the spirit of PagerDuty: it ingests events from many
-sources and formats, turns them into alerts with rules that can be changed at
-runtime, and notifies the right people over SMS, voice, email and a live web feed.
+Five hundred errors, one alert.
 
-**Status:** work in progress. Deployed: the mock data sources and the
-application infrastructure. Implemented: webhook ingest, the processor
-(parsing, rules, deduplication, alert storage, live feed publishing), the REST
-API and notifications (SMS, email, in-app, simulated voice) with throttling and
-dead-letter retries, the connector worker for HTTP and Kafka sources, and the
-load test. Next: the rule preview and AI assistant, and the web application. See [TASKS.md](TASKS.md) for the plan and the current state.
+Squawk is an alerting and notification service. It takes events from many
+sources in many formats, turns them into alerts using rules that teams edit at
+runtime, and notifies the right people by SMS, phone call, email, browser push
+and a live web feed.
+
+The application is fully implemented and live at https://squawk.com.pl. We
+built it in ten hours as a team of three for Hackathon 2026 (Software
+Engineering), with Claude as a fourth teammate.
+
+## Try it
+
+| | |
+|---|---|
+| Address | https://squawk.com.pl |
+| Email | `jury@squawk.com.pl` |
+| Password | `SquawkJury2026` |
+| Role | `admin` in the demo organization |
+
+We know that credentials in a README are unsafe. We publish them on purpose:
+the account lets the jury check every screen at once, without waiting for one
+of us to grant the admin role.
+
+The demo organization receives events from five mock sources all the time. To
+watch deduplication, send 500 identical errors to every source and look at the
+feed:
+
+```bash
+curl -X POST 'https://datasource.squawk.com.pl/scenarios/burst?count=500'
+```
+
+## What it does
+
+| Area | What you get |
+|---|---|
+| Sources | Webhooks, polled HTTP APIs and log files, Kafka topics. |
+| Schemas | Each source has a parser config: `json`, `regex` with named groups, or `kv`. |
+| Rules | Conditions on any field, nested ones included: `eq`, `neq`, `in`, `contains`, `regex`, `gt`, `gte`, `lt`, `lte`, `exists`. A rule sets severity, routing, templates per channel, grouping, throttling and a runbook. |
+| Flood control | Identical events collapse into one alert with a counter. Throttling limits notifications per rule and per recipient. |
+| Channels | SMS, email, phone call, browser push and an in-app pop-up. A rule can escalate from the least to the most intrusive channel and hold notifications outside a delivery window. |
+| Live feed | Alerts reach the browser over a WebSocket. Users acknowledge, resolve, assign and annotate them. |
+| Runbooks | Markdown, wiki link, checklist or plain text, shown next to the alert. |
+| AI rule assistant | Describe the goal in plain language. The assistant proposes conditions from the source's recent events and reports how many of them the rule would have caught. |
+| Teams | Organizations with invite codes and three roles: `admin`, `team_lead`, `user`. |
+| Workspace | Each user rearranges the screen by dragging widgets. The app installs as a PWA. |
 
 ## Architecture
 
-```
-mock sources: JSON API, application log, access log, Kafka, webhook
-  -> connector worker (pull) / API Gateway writing straight to the stream (push)
-  -> Kinesis Data Streams
-  -> processor Lambda: parse -> normalize -> rules -> deduplicate -> throttle
-  -> DynamoDB (alerts, timeline) + AppSync Events -> browser (live feed)
-  -> SQS queue per channel (+ dead-letter queue) -> notifier Lambda: SMS, voice, email, UI
-```
+![AWS infrastructure of Squawk](Docs/diagrams/aws-infrastructure.png)
 
-Sources, rules, recipient groups and runbooks are DynamoDB items. Adding or
-changing one takes effect within seconds, without a deployment or restart.
+1. A webhook reaches API Gateway, which writes it straight to Kinesis with no
+   Lambda in between. A connector worker reads pull and Kafka sources and
+   writes to the same stream.
+2. The processor Lambda parses the event, evaluates the organization's rules
+   and stores the alert in DynamoDB with one atomic update that also handles
+   deduplication.
+3. The alert goes to AppSync Events and arrives in subscribed browsers over a
+   WebSocket.
+4. Each notification is a job on its channel's SQS queue. The notifier Lambda
+   delivers it through SES, SNS, Twilio or Web Push.
+5. The web application is a single-page app on S3 and CloudFront. It calls an
+   HTTP API with a Cognito JWT authorizer.
 
-## Repository layout
+## Scalability: the cloud does it
+
+Every stage is a managed AWS service that scales by itself, so there is no
+server to size and no capacity plan.
+
+| Stage | Service | How it scales |
+|---|---|---|
+| Ingest | API Gateway writing to Kinesis | No Lambda on the path, so capacity is that of the two services |
+| Stream | Kinesis Data Streams, on-demand | Shards follow the traffic |
+| Processing | Lambda | Concurrency follows the shards |
+| Storage | DynamoDB, on-demand | Billed per request, no provisioned capacity |
+| Delivery | SQS and Lambda | Queues absorb spikes, the notifier scales with queue depth |
+| Live feed | AppSync Events | Managed WebSocket fan-out |
+| Frontend | S3 and CloudFront | Static files on a CDN |
+
+The whole stack is one `terraform apply`. Idle, it costs about 1 USD a day for
+the stream and 0.3 USD for the worker instance. Everything else is paid per
+use.
+
+## Flexibility: new sources without code
+
+A source, a rule, a recipient group and a runbook are DynamoDB items, edited in
+the UI or through the API. A change takes effect within 15 seconds, with no
+deployment and no restart.
+
+To add a source, open Sources, pick one of five presets or paste a sample
+event, confirm the field mapping and save. A webhook source gets its own URL
+and token. A pull or Kafka source is picked up by the connector worker on its
+next 15-second refresh.
+
+When configuration is not enough, each extension is one class:
+
+| To add | You write |
+|---|---|
+| A parser format | A class implementing `Parser` |
+| A notification channel or provider | A class implementing `NotificationChannel` |
+| A rule operator | An entry in the operator registry |
+| A connector type | A class implementing `Connector` |
+
+The domain logic in `backend/core` has no AWS dependencies. AWS services sit
+behind ports with adapters in `backend/aws`.
+
+## Measured performance
+
+The load test sends real webhooks and listens on the live feed like a browser,
+so "end to end" runs from the HTTP request to the alert on screen. These runs
+are from 21 November 2026 against the deployed stack, with the test machine in
+Poland and the stack in `eu-central-1`.
+
+200 requests per second for 30 seconds, every event its own alert:
+
+| Run | Rejected | Lost | End to end p50 | p99 |
+|---|---|---|---|---|
+| 1, after idle | 0 of 6000 | 0 | 207 ms | 3921 ms |
+| 2 | 0 of 6000 | 0 | 196 ms | 366 ms |
+| 3 | 0 of 6000 | 0 | 195 ms | 325 ms |
+
+A burst of 35,000 identical events at 1000 events per second produced one
+alert with a count of exactly 35,000, complete 192 ms after the last event.
+
+The account allows 10 concurrent Lambda executions, which sets today's
+ceiling: at 400 requests per second everything is still delivered, but median
+latency passes one second.
+
+The load test also found a real bug. A burst once produced two alerts and a
+count of 4990 instead of 5000, because two processor instances raced on the
+same alert. The write is now a single atomic update.
+
+Method, raw files and known limits: [loadtest/README.md](loadtest/README.md).
+
+## Reliability
+
+Each channel has its own SQS queue and dead-letter queue. A failed job is
+retried three times, then goes through the dead-letter queue for two more
+rounds, and every attempt is written to the alert's timeline. A failing
+Kinesis batch is split in half and retried, so one bad record does not block
+its shard.
+
+## Security
+
+- Users sign in through Cognito, and the API checks the caller's role on every route.
+- AppSync admits a subscriber only to the live channels of the organization in their token.
+- Each webhook source has its own ingest token.
+- API keys and signing keys are in Parameter Store.
+- Each Lambda's IAM role covers only what that function uses.
+- The connector worker has outbound network access only.
+
+## What is real and what is mocked
+
+Everything runs on AWS. SMS and email go through SNS and SES in sandbox mode,
+which reaches verified numbers and addresses only. Push was tested on a real
+phone, and phone calls go through Twilio. The data sources are mocks: one
+instance serving a JSON API, two text logs, a Kafka topic and a webhook sender
+([mocks/datasource/README.md](mocks/datasource/README.md)).
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Java 21, Maven. One jar for all four Lambda functions, with SnapStart. |
+| AWS | Kinesis Data Streams, Lambda, DynamoDB, SQS, API Gateway, AppSync Events, Cognito, SES, SNS, S3, CloudFront, EC2, Parameter Store |
+| Other services | Twilio for calls, Web Push with VAPID, Google Gemini (`gemini-flash-lite-latest`) for the rule assistant |
+| Frontend | React 19, TypeScript, Vite |
+| Infrastructure | Terraform |
+| Mocks and load test | Python, Docker Compose, Caddy, Kafka |
+
+## How we used AI
+
+We agreed the contracts first (`Docs/contracts/`) and wrote tests before code.
+Claude worked from the same contracts and the shared rules in `CLAUDE.md`.
+
+## Repository
 
 | Path | Contents |
 |---|---|
-| `Docs/contracts/` | Data shapes, DynamoDB tables, REST API and real-time channels. Start here. |
-| `Docs/frontend-integration/` | Guide for the web application: sign-in, API calls, live feed client, TypeScript types. |
-| `backend/core/` | Domain model and logic. No AWS dependencies, tested locally. |
-| `backend/aws/` | Adapters from the core's ports to AWS services, shared by the Lambdas and the worker. |
-| `backend/lambdas/` | Lambda handlers. Builds the one jar all functions run from. |
-| `backend/worker/` | Connector worker: pulls from HTTP and Kafka sources and writes to the stream. |
-| `infra/app/` | Terraform for the application: Kinesis, DynamoDB, Lambda, API Gateway, Cognito, AppSync Events, SQS. |
-| `demo/` | Demo data and ready-made API requests. |
-| `infra/datasource/` | Terraform for the mock data source instance. |
-| `loadtest/` | Load test script, how it measures, and the measured results. |
-| `mocks/datasource/` | The mock data sources. See its [README](mocks/datasource/README.md) for endpoints and formats. |
+| `Docs/contracts/` | Data shapes, DynamoDB tables, REST API and real-time channels |
+| `backend/core/` | Domain model and logic, tested locally |
+| `backend/aws/` | Adapters from the core's ports to AWS services |
+| `backend/lambdas/` | Lambda handlers |
+| `backend/worker/` | Connector worker for HTTP and Kafka sources |
+| `frontend/` | The web application |
+| `infra/app/` | Terraform for the application |
+| `infra/datasource/` | Terraform for the mock data sources |
+| `mocks/datasource/` | The mock data sources |
+| `loadtest/` | Load test and its results |
+| `demo/` | Demo data and sample API requests |
 
-## Prerequisites
+## Run it yourself
 
-- JDK 21 or newer. Maven is not needed: the wrapper in `backend/` downloads it.
-- Terraform 1.5 or newer and AWS credentials for the target account.
-- Docker, only for running the mock data sources locally.
-
-## Build and test
+You need JDK 21, Terraform 1.5 or newer, AWS credentials and Node.js 22.12 or
+newer for the frontend.
 
 ```bash
-cd backend
-./mvnw package
+cd backend && ./mvnw package && cd ..            # tests + lambdas.jar and worker.jar
+terraform -chdir=infra/app init
+terraform -chdir=infra/app apply                 # the whole backend
+scripts/deploy-frontend.sh                       # build the frontend and publish it
+java -cp backend/lambdas/target/lambdas.jar com.claudeofduty.lambda.tools.Seed demo/seed   # demo organization
 ```
 
-This runs the tests and produces `backend/lambdas/target/lambdas.jar` and `backend/worker/target/worker.jar`.
-
-## Deploy
-
-Build first, because Terraform uploads both jars.
-
-```bash
-cd backend && ./mvnw package && cd ..
-cd infra/app
-terraform init
-terraform apply
-```
-
-Settings are in `infra/app/terraform.tfvars`. After `apply`:
-
-- `terraform output ingest_url` prints the webhook URL pattern.
-- `terraform output frontend_url` prints the address of the web application.
-
-Publish the web application (builds `frontend/` against the deployed stack,
-uploads it to S3 and clears the CloudFront cache):
-
-```bash
-scripts/deploy-frontend.sh
-```
-
-To redeploy after a code change, run the same two commands again: Terraform
-notices the new jars, updates the functions and replaces the worker instance.
-
-### Pausing to save cost
-
-The Kinesis stream is the only application resource billed by the hour.
-Everything else costs nothing while idle. To delete just the stream and keep
-tables, users and settings:
-
-```bash
-terraform apply -var stream_enabled=false   # pause
-terraform apply                             # resume
-```
-
-While paused, the ingest endpoint answers with an error.
-
-### Demo data
-
-Load a demo organization (invite code `DEMO-2026`) with five sources (the
-webhook and the four pull and Kafka sources of the mock), their rules and a
-runbook library straight into DynamoDB:
-
-```bash
-java -cp backend/lambdas/target/lambdas.jar com.claudeofduty.lambda.tools.Seed demo/seed
-```
-
-Then send an event and look at the resulting alert:
-
-```bash
-API=$(terraform -chdir=infra/app output -raw api_url)
-INGEST=$(terraform -chdir=infra/app output -raw ingest_base_url)
-curl -X POST "$INGEST/ingest/demo/mock-webhook?token=demo-token" \
-  -H 'content-type: application/json' \
-  -d '{"status":"firing","alerts":[{"labels":{"alertname":"DB_TIMEOUT","severity":"error","service":"payments","instance":"pay-1"},"annotations":{"summary":"Database connection timeout"},"startsAt":"2026-11-20T21:00:00Z"}]}'
-aws dynamodb scan --table-name cod-alerts
-```
-
-### Calling the API
-
-Create a user and get a token (the password needs 8 characters with a digit):
-
-```bash
-POOL=$(terraform -chdir=infra/app output -raw user_pool_id)
-CLIENT=$(terraform -chdir=infra/app output -raw user_pool_client_id)
-aws cognito-idp sign-up --client-id $CLIENT --username you@example.com --password 'demo-pass-1'
-aws cognito-idp admin-confirm-sign-up --user-pool-id $POOL --username you@example.com
-TOKEN=$(aws cognito-idp initiate-auth --client-id $CLIENT --auth-flow USER_PASSWORD_AUTH \
-  --auth-parameters USERNAME=you@example.com,PASSWORD='demo-pass-1' \
-  --query AuthenticationResult.IdToken --output text)
-```
-
-Join the demo organization and read its alerts:
-
-```bash
-curl -X POST "$API/orgs/join" -H "Authorization: Bearer $TOKEN" -d '{"inviteCode":"DEMO-2026"}'
-curl "$API/alerts" -H "Authorization: Bearer $TOKEN"
-```
-
-The first user to join an organization without members becomes its admin. All
-endpoints are listed in [Docs/contracts/api.md](Docs/contracts/api.md).
-
-### Pull and Kafka sources
-
-The connector worker runs on one EC2 instance created by `infra/app`. Every 15
-seconds it reads the sources from DynamoDB and keeps one connector running per
-enabled `http-pull` or `kafka` source, so a source added through the API starts
-flowing without a deployment. Webhook sources do not need the worker.
-
-```bash
-$(terraform -chdir=infra/app output -raw worker_logs_command)   # follow its log
-```
-
-Set `worker_enabled = false` in `infra/app/terraform.tfvars` to stop paying for
-the instance. To run the worker on your own machine instead:
-
-```bash
-STREAM_NAME=cod-events TABLE_PREFIX=cod- AWS_REGION=eu-central-1 java -jar backend/worker/target/worker.jar
-```
-
-### Notifications
-
-A rule's `routing` lists who is notified over which channel when the rule
-creates an alert. Channels: `sms` (Amazon SNS), `email` (Amazon SES), `ui`
-(pop-up in the web application) and `voice` (a phone call through Twilio when `voice_provider = "twilio"` is set in `infra/app/terraform.tfvars`; otherwise the call is only logged and shown as simulated).
-
-- **Email** needs a sender: set `notification_sender_email` in
-  `infra/app/terraform.tfvars`, apply, and click the confirmation link SES
-  sends to that address. In the SES sandbox the recipients must be verified too.
-- **SMS** in the SNS sandbox reaches verified phone numbers only.
-
-Every delivery try is written to the alert's timeline, with the measured
-ingest-to-delivery latency on success. A failing job is retried three times,
-then goes through the dead-letter queue for two more rounds before it is given up on.
-
-The mock data sources are deployed separately from `infra/datasource`, as
-described in [mocks/datasource/README.md](mocks/datasource/README.md).
+Settings are in `infra/app/terraform.tfvars`. To redeploy after a code change,
+run the build and `apply` again. The REST API is described in
+[Docs/contracts/api.md](Docs/contracts/api.md).

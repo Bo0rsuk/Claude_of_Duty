@@ -2657,3 +2657,11 @@ dialog::backdrop {
 .escalation-hint {
   margin: calc(-1 * var(--space-2)) 0 var(--space-4);
 }
+
+.feed-scope {
+  flex-shrink: 0;
+}
+.feed-scope button {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}

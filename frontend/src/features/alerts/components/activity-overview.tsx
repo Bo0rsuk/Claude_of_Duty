@@ -6,10 +6,10 @@ import { useState } from "react";
 const NO_BACKGROUND = Array<number>(72).fill(0);
 
 export function ActivityOverview() {
-  const { data, account } = useWorkspaceContext(),
+  const { scopedAlerts, account } = useWorkspaceContext(),
     [period, setPeriod] = useState("24");
   const { active, total, samples, max } = summarizeActivity(
-    data.alerts,
+    scopedAlerts,
     Number(period),
     Date.now(),
     // The made-up background traffic belongs to the demo only.

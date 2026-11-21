@@ -31,7 +31,7 @@ interface SidebarProps {
   onOpenAccount: () => void;
 }
 export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProps) {
-  const { panel, role, data } = useWorkspaceContext();
+  const { panel, role, scopedAlerts } = useWorkspaceContext();
   function navSection(label: string, items: Panel[]) {
     const list = items.filter((p) => allowed(p, role));
     if (!list.length) return null;
@@ -56,7 +56,7 @@ export function Sidebar({ access, user, onNavigate, onOpenAccount }: SidebarProp
               <span>{p === "Custom" ? "Custom view" : p}</span>
               {p === "Alerts" && (
                 <small>
-                  {data.alerts.filter((a) => a.status !== "Resolved").length}
+                  {scopedAlerts.filter((a) => a.status !== "Resolved").length}
                 </small>
               )}
             </a>

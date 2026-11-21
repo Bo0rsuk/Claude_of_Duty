@@ -1,11 +1,7 @@
 # Frontend integration guide
 
-Everything the web application needs to talk to the backend. The backend is
-deployed and all endpoints named here are live.
-
-The application in `frontend/` follows this guide; its client code is in
-`frontend/src/services/backend/`. It signs in with plain `fetch` calls to
-Cognito instead of Amplify, so sections 2 and 3 show the Amplify equivalent.
+How the web application talks to the backend. The application in `frontend/`
+follows this guide; its client code is in `frontend/src/services/backend/`.
 
 | File | Use |
 |---|---|
@@ -32,53 +28,13 @@ CORS allows any origin for now, so `http://localhost:5173` works.
 
 ## 2. Signing in
 
-Users sign up with email and password in Cognito. Amplify's ready-made
-`Authenticator` component covers sign-up, email confirmation and sign-in:
-
-```ts
-import { Amplify } from 'aws-amplify';
-
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: import.meta.env.VITE_USER_POOL_ID,
-      userPoolClientId: import.meta.env.VITE_USER_POOL_CLIENT_ID,
-    },
-  },
-});
-```
-
-**Send the ID token, not the access token.** The API reads the user's email
-from it:
-
-```ts
-import { fetchAuthSession } from 'aws-amplify/auth';
-
-export async function idToken(): Promise<string> {
-  const session = await fetchAuthSession();
-  return session.tokens!.idToken!.toString();
-}
-```
-
-`fetchAuthSession` refreshes an expired token by itself. Tokens last one hour.
+Users sign up with email and password in Cognito. The application signs in
+with plain `fetch` calls to Cognito. Send the ID token to the API: it reads
+the user's email from it. Tokens last one hour.
 
 ## 3. Calling the API
 
-```ts
-import type { ApiError } from './types';
-
-export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const response = await fetch(import.meta.env.VITE_API_URL + path, {
-    method,
-    headers: { Authorization: `Bearer ${await idToken()}`, 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (response.status === 204) return undefined as T;
-  const payload = await response.json();
-  if (!response.ok) throw new Error((payload as ApiError).error.message);
-  return payload as T;
-}
-```
+Every request carries `Authorization: Bearer <ID token>`.
 
 - Lists come as `{ items, nextCursor }`. Pass `?cursor=<nextCursor>` for the next page.
 - Errors come as `{ error: { code, message } }`. `message` is written for people and can be shown as is.
@@ -94,23 +50,13 @@ else and must see one of two forms:
 | Create an organization | `POST /orgs` `{ "name": "..." }` | The user becomes its `admin`. The response holds the `inviteCode` to share. |
 | Join with a code | `POST /orgs/join` `{ "inviteCode": "ABCD-EFGH" }` | The user joins as `user`. A wrong code answers `404`. |
 
-For development, the demo organization has the code `DEMO-2026` and already
-receives alerts from five sources.
+The demo organization has the code `DEMO-2026` and already receives alerts
+from five sources.
 
-**Refresh the token after creating or joining.** The user's organization is
-part of the ID token, and the real-time channels only admit a subscriber to
-the channels of the organization in the token. A token issued before the user
-had an organization does not carry it, so get a new one:
-
-```ts
-import { fetchAuthSession } from 'aws-amplify/auth';
-
-const profile = await api<Profile>('GET', '/me');
-if (profile.tokenRefreshNeeded) await fetchAuthSession({ forceRefresh: true });
-```
-
-Do this once after sign-in and again right after `POST /orgs` or
-`POST /orgs/join`. Without it the subscription in the next section is refused.
+Refresh the token after `POST /orgs` or `POST /orgs/join`, and once after
+sign-in when `GET /me` returns `tokenRefreshNeeded`. The user's organization is
+part of the ID token, and the real-time channels admit a subscriber only to the
+channels of the organization in the token.
 
 Roles decide what to show (the API enforces them regardless):
 
@@ -125,44 +71,12 @@ the user. The phone number must be in the form `+48600100200`.
 
 ## 5. Live feed
 
-Load the current alerts once, then keep them up to date from the WebSocket:
-
-```tsx
-import { useEffect, useState } from 'react';
-import { subscribe } from './liveFeed';
-import type { Alert, AlertMessage, Page } from './types';
-
-export function useAlerts(orgId: string) {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    api<Page<Alert>>('GET', '/alerts?limit=100').then((page) => setAlerts(page.items));
-
-    const subscription = subscribe<AlertMessage>(
-      {
-        realtimeEndpoint: import.meta.env.VITE_EVENTS_REALTIME_ENDPOINT,
-        httpEndpoint: import.meta.env.VITE_EVENTS_HTTP_ENDPOINT,
-        getIdToken: idToken,
-      },
-      `/alerts/${orgId}`,
-      {
-        onStatus: setConnected,
-        onMessage: ({ alert }) =>
-          // Both message types carry the whole alert: put it first and drop the old copy.
-          setAlerts((current) => [alert, ...current.filter((other) => other.alertId !== alert.alertId)]),
-      },
-    );
-    return () => subscription.close();
-  }, [orgId]);
-
-  return { alerts, connected };
-}
-```
+Load the current alerts once with `GET /alerts?limit=100`, then keep them up
+to date from the WebSocket channel `/alerts/${orgId}` using `subscribe` from
+[liveFeed.ts](liveFeed.ts). Every message carries the whole alert.
 
 - A subscription is accepted only for the user's own organization, and only with the ID token. A refused one arrives in `onError` as `subscribe_error` with the type `Unauthorized`: the token is stale, see section 4.
 - `alert.created` is a new alert. `alert.updated` means its count, status, assignee or ticked runbook steps changed, or a note was added. `alert.deleted` means a team lead deleted it: drop it from the list instead of adding it.
-- The `useAlerts` example above treats every message as an update. Check `type` first once alerts can be deleted.
 - The client reconnects by itself. After a reconnect, reload `GET /alerts`, because messages sent while offline are not replayed. `onStatus(true)` is the moment to do it.
 - An open alert window should reload its timeline when an update for its alert arrives.
 - A burst of identical events sends many `alert.updated` messages for one alert, each with a higher `count`. Rendering must cope with several per second.
@@ -171,10 +85,6 @@ For pop-ups aimed at the signed-in user, subscribe the same way to
 `/notifications/${orgId}/${userId}` with the type `NotificationMessage`, and
 open the alert window for `alertId` when the pop-up is clicked. This is how a
 rule's `ui` channel reaches the user.
-
-Amplify's own `events.connect()` from `aws-amplify/data` is an alternative to
-`liveFeed.ts`. We did not verify it against this stack, and its documentation
-leaves open which token it sends and the exact shape of received messages.
 
 ## 6. Screens and the calls behind them
 
@@ -251,10 +161,6 @@ Unknown paths are answered with `index.html`, so client-side routes such as
 
 ## 8. Installing as an app and push notifications
 
-The CloudFront URL is HTTPS, which is what a web app manifest, a service
-worker and web push require. Add a `manifest.json` (with `"display":
-"standalone"`) so the site can be installed to the home screen.
-
 Push reaches the device even when the application is closed:
 
 1. Copy [sw.js](sw.js) to the site root (`public/sw.js` in a Vite project). `/sw.js` is served without caching, so an update reaches users at once.
@@ -274,5 +180,4 @@ Push reaches the device even when the application is closed:
 - A device whose browser unsubscribed is forgotten by the server on the next push.
 - Clicking a notification opens `<app url>/alerts/{alertId}`, the same route SMS and email link to.
 
-`demo/push-test/` is a standalone page that does steps 1 and 2. Use it to try
-push on a phone before the application has the button.
+`demo/push-test/` is a standalone page for trying push on a phone.

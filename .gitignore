@@ -12,6 +12,8 @@ build/
 target/
 __pycache__/
 *.pyc
+.venv/
+venv/
 .env
 .env.*
 !.env.example

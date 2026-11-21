@@ -1,7 +1,7 @@
 # Mock data sources
 
-One host that emits events non-stop in five formats. It plays the role of the
-external systems our application ingests from.
+One host that emits events non-stop in five formats, standing in for the
+external systems Squawk ingests from.
 
 | Source | How to read it | Format |
 |---|---|---|
@@ -114,11 +114,11 @@ This creates one EC2 instance with an Elastic IP in its own small VPC. The
 `endpoints` output lists the URLs. The instance needs about three minutes after
 `apply` to install Docker and start the containers.
 
-- **Domain:** the mocks are served at `https://datasource.squawk.com.pl` (`domain_name` in `terraform.tfvars`). With `route53_zone_id` set, Terraform creates the DNS record. Otherwise add the A records shown in the `dns_records` output at the registrar. HTTPS starts working once the record resolves.
-- **Settings:** region, domain, instance size, event rate and webhook URL live in `infra/datasource/terraform.tfvars`.
-- **Updating the mocks:** the files in this directory are shipped through cloud-init, so after a change `terraform apply` replaces the instance. The IP and the hostname stay the same.
-- **Certificates:** every replacement requests a new TLS certificate, and Let's Encrypt issues at most 5 per week for the same hostname. Iterate locally and deploy finished versions.
-- **Shell access:** there is no SSH. Use the `ssm_session_command` output.
+- The mocks are served at `https://datasource.squawk.com.pl` (`domain_name` in `terraform.tfvars`). With `route53_zone_id` set, Terraform creates the DNS record. Otherwise add the A records from the `dns_records` output at the registrar.
+- Region, domain, instance size, event rate and webhook URL are in `infra/datasource/terraform.tfvars`.
+- After a change to the mocks, `terraform apply` replaces the instance. The IP and the hostname stay the same.
+- Every replacement requests a new TLS certificate, and Let's Encrypt issues at most 5 per week for one hostname.
+- There is no SSH. Use the `ssm_session_command` output.
 
 ## Adding a source
 

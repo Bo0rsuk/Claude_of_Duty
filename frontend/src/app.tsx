@@ -66,6 +66,7 @@ export function App() {
     rule,
     account: person,
     incoming,
+    scopedAlerts,
   } = useWorkspaceContext();
   const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const [collapsed, setCollapsed] = useLocal("fans:collapsed", () => false),
@@ -131,7 +132,7 @@ export function App() {
     window.addEventListener("hashchange", read);
     return () => window.removeEventListener("hashchange", read);
   }, [role]);
-  useCriticalSignal(data.alerts, titles[panel] + " · Squawk");
+  useCriticalSignal(scopedAlerts, titles[panel] + " · Squawk");
   useEffect(() => {
     if (!notice) return;
     const t = setTimeout(() => setNotice(null), 8000);

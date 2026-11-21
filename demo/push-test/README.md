@@ -1,7 +1,7 @@
 # Push notification test page
 
-A single page for checking push notifications on a real phone or browser before
-the web application exists. It signs in, registers the device and logs the result.
+A single page for checking push notifications on a real phone or browser. It
+signs in, registers the device and logs the result.
 
 Deploy it next to the frontend (run from the repository root):
 
